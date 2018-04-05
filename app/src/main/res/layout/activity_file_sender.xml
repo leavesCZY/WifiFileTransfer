@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
         android:gravity="start"
-        android:text="在发送文件前需要先连上文件接收端开启的Wifi热点\n热点名：Can \n密码：12345678901"
+        android:text="在发送文件前需要先连上文件接收端开启的Wifi热点\n热点名：leavesC \n密码：12345678901"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

@@ -13,7 +13,6 @@ public class Logger {
 
     public static void e(String tag, String log) {
         if (!TextUtils.isEmpty(tag) && !TextUtils.isEmpty(log)) {
-            //LogFileUtil.writeLog(tag + "__" + log);
             Log.e(tag, log);
         }
     }

@@ -190,8 +190,6 @@ public class FileReceiverService extends IntentService {
         }
     }
 
-    private static final String PATH_PRE = "/storage/sdcard1/";
-
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent != null && ACTION_START_RECEIVE.equals(intent.getAction())) {
@@ -217,7 +215,6 @@ public class FileReceiverService extends IntentService {
                 }
                 String name = new File(fileTransfer.getFilePath()).getName();
                 //将文件存储至指定位置
-                //Environment.getExternalStorageDirectory() + "/"
                 file = new File(Environment.getExternalStorageDirectory() + "/" + name);
                 fileOutputStream = new FileOutputStream(file);
                 startCallback();
