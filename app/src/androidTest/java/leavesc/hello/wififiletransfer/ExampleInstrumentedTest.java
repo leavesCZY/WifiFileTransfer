@@ -1,4 +1,4 @@
-package com.czy.wififiletransfer;
+package leavesc.hello.wififiletransfer;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

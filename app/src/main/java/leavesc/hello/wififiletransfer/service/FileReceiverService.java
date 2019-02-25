@@ -1,65 +1,46 @@
-package com.czy.wififiletransfer.service;
+package leavesc.hello.wififiletransfer.service;
 
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.czy.wififiletransfer.common.Constants;
-import com.czy.wififiletransfer.common.Logger;
-import com.czy.wififiletransfer.common.Md5Util;
-import com.czy.wififiletransfer.manager.WifiLManager;
-import com.czy.wififiletransfer.model.FileTransfer;
-
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
+import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import leavesc.hello.wififiletransfer.common.Constants;
+import leavesc.hello.wififiletransfer.common.Logger;
+import leavesc.hello.wififiletransfer.common.Md5Util;
+import leavesc.hello.wififiletransfer.model.FileTransfer;
+
 /**
  * 作者：chenZY
- * 时间：2018/4/3 17:32
+ * 时间：2018/4/3 15:23
  * 描述：https://www.jianshu.com/u/9df45b87cfdf
  * https://github.com/leavesC
  */
-public class FileSenderService extends IntentService {
+public class FileReceiverService extends IntentService {
 
-    private Socket socket;
+    private static final String ACTION_START_RECEIVE = "com.czy.wififiletransfer.service.action.startReceive";
 
-    private OutputStream outputStream;
+    private static final String TAG = "FileReceiverService";
 
-    private ObjectOutputStream objectOutputStream;
-
-    private InputStream inputStream;
-
-    private OnSendProgressChangListener progressChangListener;
-
-    private static final String ACTION_START_SEND = "com.czy.wififiletransfer.service.action.startSend";
-
-    private static final String EXTRA_PARAM_FILE_TRANSFER = "com.czy.wififiletransfer.service.extra.FileTransfer";
-
-    private static final String EXTRA_PARAM_IP_ADDRESS = "com.czy.wififiletransfer.service.extra.IpAddress";
-
-    private static final String TAG = "FileSenderService";
-
-    public interface OnSendProgressChangListener {
-
-        /**
-         * 如果待发送的文件还没计算MD5码，则在开始计算MD5码时回调
-         */
-        void onStartComputeMD5();
+    public interface OnReceiveProgressChangListener {
 
         /**
          * 当传输进度发生变化时回调
@@ -73,6 +54,11 @@ public class FileSenderService extends IntentService {
          * @param averageRemainingTime 平均-预估的剩余完成时间
          */
         void onProgressChanged(FileTransfer fileTransfer, long totalTime, int progress, double instantSpeed, long instantRemainingTime, double averageSpeed, long averageRemainingTime);
+
+        /**
+         * 当文件传输结束后，开始计算MD5码时回调
+         */
+        void onStartComputeMD5();
 
         /**
          * 当文件传输成功时回调
@@ -91,30 +77,40 @@ public class FileSenderService extends IntentService {
 
     }
 
-    public FileSenderService() {
-        super("FileSenderService");
-    }
+    private ServerSocket serverSocket;
+
+    private InputStream inputStream;
+
+    private ObjectInputStream objectInputStream;
+
+    private FileOutputStream fileOutputStream;
+
+    private OnReceiveProgressChangListener progressChangListener;
 
     public class MyBinder extends Binder {
-        public FileSenderService getService() {
-            return FileSenderService.this;
+        public FileReceiverService getService() {
+            return FileReceiverService.this;
         }
+    }
+
+    public FileReceiverService() {
+        super("FileReceiverService");
     }
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return new FileSenderService.MyBinder();
+        return new MyBinder();
     }
 
     private ScheduledExecutorService callbackService;
 
     private FileTransfer fileTransfer;
 
-    //总的已传输字节数
+    //总的已接收字节数
     private long total;
 
-    //在上一次更新进度时已传输的文件总字节数
+    //在上一次更新进度时已接收的文件总字节数
     private long tempTotal = 0;
 
     //计算瞬时传输速率的间隔时间
@@ -123,8 +119,12 @@ public class FileSenderService extends IntentService {
     //传输操作开始时间
     private Date startTime;
 
+    //用于标记是否正在进行文件接收操作
+    private boolean running;
+
     private void startCallback() {
         startTime = new Date();
+        running = true;
         if (callbackService != null) {
             if (!callbackService.isShutdown()) {
                 callbackService.shutdown();
@@ -181,6 +181,7 @@ public class FileSenderService extends IntentService {
     }
 
     private void stopCallback() {
+        running = false;
         if (callbackService != null) {
             if (!callbackService.isShutdown()) {
                 callbackService.shutdown();
@@ -191,67 +192,74 @@ public class FileSenderService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        if (intent != null && ACTION_START_SEND.equals(intent.getAction())) {
+        if (intent != null && ACTION_START_RECEIVE.equals(intent.getAction())) {
             clean();
-            fileTransfer = (FileTransfer) intent.getSerializableExtra(EXTRA_PARAM_FILE_TRANSFER);
-            String ipAddress = intent.getStringExtra(EXTRA_PARAM_IP_ADDRESS);
-            Log.e(TAG, "IP地址：" + ipAddress);
-            if (fileTransfer == null || TextUtils.isEmpty(ipAddress)) {
-                return;
-            }
-            if (TextUtils.isEmpty(fileTransfer.getMd5())) {
-                Logger.e(TAG, "MD5码为空，开始计算文件的MD5码");
-                if (progressChangListener != null) {
-                    progressChangListener.onStartComputeMD5();
-                }
-                fileTransfer.setMd5(Md5Util.getMd5(new File(fileTransfer.getFilePath())));
-                Log.e(TAG, "计算结束，文件的MD5码值是：" + fileTransfer.getMd5());
-            } else {
-                Logger.e(TAG, "MD5码不为空，无需再次计算，MD5码为：" + fileTransfer.getMd5());
-            }
-            int index = 0;
-            while (ipAddress.equals("0.0.0.0") && index < 5) {
-                Log.e(TAG, "ip: " + ipAddress);
-                ipAddress = WifiLManager.getHotspotIpAddress(this);
-                index++;
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (ipAddress.equals("0.0.0.0")) {
-                return;
-            }
+            File file = null;
+            Exception exception = null;
             try {
-                socket = new Socket();
-                socket.bind(null);
-                socket.connect((new InetSocketAddress(ipAddress, Constants.PORT)), 20000);
-                outputStream = socket.getOutputStream();
-                objectOutputStream = new ObjectOutputStream(outputStream);
-                objectOutputStream.writeObject(fileTransfer);
-                inputStream = new FileInputStream(new File(fileTransfer.getFilePath()));
+                serverSocket = new ServerSocket();
+                serverSocket.setReuseAddress(true);
+                serverSocket.bind(new InetSocketAddress(Constants.PORT));
+                Socket client = serverSocket.accept();
+                Log.e(TAG, "客户端IP地址 : " + client.getInetAddress().getHostAddress());
+                inputStream = client.getInputStream();
+                objectInputStream = new ObjectInputStream(inputStream);
+                fileTransfer = (FileTransfer) objectInputStream.readObject();
+                Log.e(TAG, "待接收的文件: " + fileTransfer);
+                if (fileTransfer == null) {
+                    exception = new Exception("从文件发送端发来的文件模型为null");
+                    return;
+                } else if (TextUtils.isEmpty(fileTransfer.getMd5())) {
+                    exception = new Exception("从文件发送端发来的文件模型不包含MD5码");
+                    return;
+                }
+                String name = new File(fileTransfer.getFilePath()).getName();
+                //将文件存储至指定位置
+                file = new File(Environment.getExternalStorageDirectory() + "/" + name);
+                fileOutputStream = new FileOutputStream(file);
                 startCallback();
                 byte buf[] = new byte[512];
                 int len;
                 while ((len = inputStream.read(buf)) != -1) {
-                    outputStream.write(buf, 0, len);
+                    fileOutputStream.write(buf, 0, len);
                     total += len;
                 }
-                Log.e(TAG, "文件发送成功");
+                Log.e(TAG, "文件接收成功");
                 stopCallback();
                 if (progressChangListener != null) {
                     //因为上面在计算文件传输进度时因为小数点问题可能不会显示到100%，所以此处手动将之设为100%
                     progressChangListener.onProgressChanged(fileTransfer, 0, 100, 0, 0, 0, 0);
-                    progressChangListener.onTransferSucceed(fileTransfer);
+                    //开始计算传输到本地的文件的MD5码
+                    progressChangListener.onStartComputeMD5();
                 }
             } catch (Exception e) {
-                Log.e(TAG, "文件发送异常 Exception: " + e.getMessage());
-                if (progressChangListener != null) {
-                    progressChangListener.onTransferFailed(fileTransfer, e);
-                }
+                Log.e(TAG, "文件接收 Exception: " + e.getMessage());
+                exception = e;
             } finally {
+                FileTransfer transfer = new FileTransfer();
+                if (file != null && file.exists()) {
+                    transfer.setFilePath(file.getPath());
+                    transfer.setFileSize(file.length());
+                    transfer.setMd5(Md5Util.getMd5(file));
+                    Log.e(TAG, "计算出的文件的MD5码是：" + transfer.getMd5());
+                }
+                if (exception != null) {
+                    if (progressChangListener != null) {
+                        progressChangListener.onTransferFailed(transfer, exception);
+                    }
+                } else {
+                    if (progressChangListener != null) {
+                        if (fileTransfer.getMd5().equals(transfer.getMd5())) {
+                            progressChangListener.onTransferSucceed(transfer);
+                        } else {
+                            //如果本地计算出的MD5码和文件发送端传来的值不一致，则认为传输失败
+                            progressChangListener.onTransferFailed(transfer, new Exception("MD5码不一致"));
+                        }
+                    }
+                }
                 clean();
+                //再次启动服务，等待客户端下次连接
+                startActionTransfer(this);
             }
         }
     }
@@ -260,30 +268,13 @@ public class FileSenderService extends IntentService {
     public void onDestroy() {
         super.onDestroy();
         clean();
-        Log.e(TAG, "onDestroy");
     }
 
-    public void clean() {
-        if (socket != null) {
+    private void clean() {
+        if (serverSocket != null) {
             try {
-                socket.close();
-                socket = null;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (outputStream != null) {
-            try {
-                outputStream.close();
-                outputStream = null;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (objectOutputStream != null) {
-            try {
-                objectOutputStream.close();
-                objectOutputStream = null;
+                serverSocket.close();
+                serverSocket = null;
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -296,6 +287,22 @@ public class FileSenderService extends IntentService {
                 e.printStackTrace();
             }
         }
+        if (objectInputStream != null) {
+            try {
+                objectInputStream.close();
+                objectInputStream = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (fileOutputStream != null) {
+            try {
+                fileOutputStream.close();
+                fileOutputStream = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         stopCallback();
         total = 0;
         tempTotal = 0;
@@ -303,15 +310,17 @@ public class FileSenderService extends IntentService {
         fileTransfer = null;
     }
 
-    public static void startActionTransfer(Context context, FileTransfer fileTransfer, String ipAddress) {
-        Intent intent = new Intent(context, FileSenderService.class);
-        intent.setAction(ACTION_START_SEND);
-        intent.putExtra(EXTRA_PARAM_FILE_TRANSFER, fileTransfer);
-        intent.putExtra(EXTRA_PARAM_IP_ADDRESS, ipAddress);
+    public boolean isRunning() {
+        return running;
+    }
+
+    public static void startActionTransfer(Context context) {
+        Intent intent = new Intent(context, FileReceiverService.class);
+        intent.setAction(ACTION_START_RECEIVE);
         context.startService(intent);
     }
 
-    public void setProgressChangListener(OnSendProgressChangListener progressChangListener) {
+    public void setProgressChangListener(OnReceiveProgressChangListener progressChangListener) {
         this.progressChangListener = progressChangListener;
     }
 

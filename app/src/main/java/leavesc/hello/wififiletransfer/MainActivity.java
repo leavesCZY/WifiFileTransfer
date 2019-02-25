@@ -1,4 +1,4 @@
-package com.czy.wififiletransfer;
+package leavesc.hello.wififiletransfer;
 
 import android.os.Bundle;
 import android.view.View;
@@ -14,7 +14,7 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(leavesc.hello.wififiletransfer.R.layout.activity_main);
     }
 
     public void startFileSenderActivity(View view) {

@@ -1,4 +1,4 @@
-package com.czy.wififiletransfer;
+package leavesc.hello.wififiletransfer;
 
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
@@ -15,11 +15,11 @@ import android.util.Log;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 
-import com.czy.wififiletransfer.common.Constants;
-import com.czy.wififiletransfer.common.Logger;
-import com.czy.wififiletransfer.manager.ApManager;
-import com.czy.wififiletransfer.model.FileTransfer;
-import com.czy.wififiletransfer.service.FileReceiverService;
+import leavesc.hello.wififiletransfer.common.Constants;
+import leavesc.hello.wififiletransfer.common.Logger;
+import leavesc.hello.wififiletransfer.manager.ApManager;
+import leavesc.hello.wififiletransfer.model.FileTransfer;
+import leavesc.hello.wififiletransfer.service.FileReceiverService;
 
 import java.io.File;
 import java.util.Locale;
@@ -154,7 +154,7 @@ public class FileReceiverActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_file_receiver);
+        setContentView(leavesc.hello.wififiletransfer.R.layout.activity_file_receiver);
         initView();
         IntentFilter intentFilter = new IntentFilter("android.net.wifi.WIFI_AP_STATE_CHANGED");
         registerReceiver(wifiBroadcastReceiver, intentFilter);

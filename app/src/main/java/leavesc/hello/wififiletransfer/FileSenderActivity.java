@@ -1,4 +1,4 @@
-package com.czy.wififiletransfer;
+package leavesc.hello.wififiletransfer;
 
 import android.app.ProgressDialog;
 import android.content.ComponentName;
@@ -12,12 +12,12 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 
-import com.czy.wififiletransfer.common.Constants;
-import com.czy.wififiletransfer.manager.WifiLManager;
-import com.czy.wififiletransfer.model.FileTransfer;
-import com.czy.wififiletransfer.service.FileSenderService;
-
 import java.io.File;
+
+import leavesc.hello.wififiletransfer.common.Constants;
+import leavesc.hello.wififiletransfer.manager.WifiLManager;
+import leavesc.hello.wififiletransfer.model.FileTransfer;
+import leavesc.hello.wififiletransfer.service.FileSenderService;
 
 /**
  * 作者：chenZY
@@ -129,7 +129,7 @@ public class FileSenderActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_file_sender);
+        setContentView(leavesc.hello.wififiletransfer.R.layout.activity_file_sender);
         initView();
         bindService(FileSenderService.class, serviceConnection);
     }

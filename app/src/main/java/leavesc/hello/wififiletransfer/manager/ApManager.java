@@ -1,4 +1,4 @@
-package com.czy.wififiletransfer.manager;
+package leavesc.hello.wififiletransfer.manager;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

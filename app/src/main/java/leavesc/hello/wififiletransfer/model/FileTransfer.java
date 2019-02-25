@@ -1,4 +1,4 @@
-package com.czy.wififiletransfer.model;
+package leavesc.hello.wififiletransfer.model;
 
 import java.io.File;
 import java.io.Serializable;

@@ -1,4 +1,4 @@
-package com.czy.wififiletransfer.common;
+package leavesc.hello.wififiletransfer.common;
 
 import android.text.TextUtils;
 import android.util.Log;

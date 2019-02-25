@@ -1,4 +1,4 @@
-package com.czy.wififiletransfer.manager;
+package leavesc.hello.wififiletransfer.manager;
 
 import android.content.Context;
 import android.net.DhcpInfo;
