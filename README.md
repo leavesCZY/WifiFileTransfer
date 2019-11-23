@@ -49,52 +49,7 @@
 
 ### 二、文件接收端
 
-文件接收端作为服务器存在，需要主动开启Ap热点供文件发送端连接，此处开启Ap热点的方法是通过反射来实现，这种方法虽然方便，但并不保证在所有系统上都能成功，比如我在 7.1.2 版本系统上就开启不了，最好还是引导用户去主动开启
-
-```java
-    /**
-     * 开启便携热点
-     *
-     * @param context  上下文
-     * @param ssid     SSID
-     * @param password 密码
-     * @return 是否成功
-     */
-    public static boolean openAp(Context context, String ssid, String password) {
-        WifiManager wifimanager = (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
-        if (wifimanager == null) {
-            return false;
-        }
-        if (wifimanager.isWifiEnabled()) {
-            wifimanager.setWifiEnabled(false);
-        }
-        try {
-            Method method = wifimanager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
-            method.invoke(wifimanager, null, false);
-            method = wifimanager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
-            method.invoke(wifimanager, createApConfiguration(ssid, password), true);
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    /**
-     * 关闭便携热点
-     *
-     * @param context 上下文
-     */
-    public static void closeAp(Context context) {
-        WifiManager wifimanager = (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
-        try {
-            Method method = wifimanager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
-            method.invoke(wifimanager, null, false);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-```
+文件接收端作为服务器存在，需要主动开启Ap热点供文件发送端连接，由于通过反射来开启热点的方法在高版本系统上无法实现，所以需要用户主动去开启热点，并设置固定的热点名称
 
 此处需要先定义一个文件信息模型 FileTransfer ，FileTransfer 包含三个字段，MD5码值用于校验文件的完整性，fileLength 是为了用于计算文件的传输进度和传输速率
 
@@ -120,94 +75,77 @@ Ap热点开启成功后，就可以启动一个服务在后台等待文件发送
 文件传输速率是每一秒计算一次，根据这段时间内接收的字节数与消耗的时间做除法，从而得到传输速率，再通过将剩余的未传输字节数与传输速率做除法，从而得到预估的剩余传输时间
 
 ```java
-    @Override
+@Override
     protected void onHandleIntent(Intent intent) {
-        clean();
-        File file = null;
-        try {
-            serverSocket = new ServerSocket();
-            serverSocket.setReuseAddress(true);
-            serverSocket.bind(new InetSocketAddress(Constants.PORT));
-            Socket client = serverSocket.accept();
-            Log.e(TAG, "客户端IP地址 : " + client.getInetAddress().getHostAddress());
-            inputStream = client.getInputStream();
-            objectInputStream = new ObjectInputStream(inputStream);
-            FileTransfer fileTransfer = (FileTransfer) objectInputStream.readObject();
-            Log.e(TAG, "待接收的文件: " + fileTransfer);
-            String name = new File(fileTransfer.getFilePath()).getName();
-            //将文件存储至指定位置
-            file = new File(Environment.getExternalStorageDirectory() + "/" + name);
-            fileOutputStream = new FileOutputStream(file);
-            byte buf[] = new byte[512];
-            int len;
-            //文件大小
-            long fileSize = fileTransfer.getFileLength();
-            //当前的传输进度
-            int progress;
-            //总的已接收字节数
-            long total = 0;
-            //缓存-当次更新进度时的时间
-            long tempTime = System.currentTimeMillis();
-            //缓存-当次更新进度时已接收的总字节数
-            long tempTotal = 0;
-            //传输速率（Kb/s）
-            double speed = 0;
-            //预估的剩余完成时间（秒）
-            long remainingTime;
-            while ((len = inputStream.read(buf)) != -1) {
-                fileOutputStream.write(buf, 0, len);
-                total += len;
-                long time = System.currentTimeMillis() - tempTime;
-                //每一秒更新一次传输速率和传输进度
-                if (time > 1000) {
-                    //当前的传输进度
-                    progress = (int) (total * 100 / fileSize);
-                    Logger.e(TAG, "---------------------------");
-                    Logger.e(TAG, "传输进度: " + progress);
-                    Logger.e(TAG, "时间变化：" + time / 1000.0);
-                    Logger.e(TAG, "字节变化：" + (total - tempTotal));
-                    //计算传输速率，字节转Kb，毫秒转秒   17:45:07
-                    speed = ((total - tempTotal) / 1024.0 / (time / 1000.0));
-                    //预估的剩余完成时间
-                    remainingTime = (long) ((fileSize - total) / 1024.0 / speed);
-                    Logger.e(TAG, "传输速率：" + speed);
-                    Logger.e(TAG, "预估的剩余完成时间：" + remainingTime);
-                    //缓存-当次更新进度时已传输的总字节数
-                    tempTotal = total;
-                    //缓存-当次更新进度时的时间
-                    tempTime = System.currentTimeMillis();
+        if (intent != null && ACTION_START_RECEIVE.equals(intent.getAction())) {
+            clean();
+            File file = null;
+            Exception exception = null;
+            try {
+                serverSocket = new ServerSocket();
+                serverSocket.setReuseAddress(true);
+                serverSocket.bind(new InetSocketAddress(Constants.PORT));
+                Socket client = serverSocket.accept();
+                Log.e(TAG, "客户端IP地址 : " + client.getInetAddress().getHostAddress());
+                inputStream = client.getInputStream();
+                objectInputStream = new ObjectInputStream(inputStream);
+                fileTransfer = (FileTransfer) objectInputStream.readObject();
+                Log.e(TAG, "待接收的文件: " + fileTransfer);
+                if (fileTransfer == null) {
+                    exception = new Exception("从文件发送端发来的文件模型为null");
+                    return;
+                } else if (TextUtils.isEmpty(fileTransfer.getMd5())) {
+                    exception = new Exception("从文件发送端发来的文件模型不包含MD5码");
+                    return;
+                }
+                String name = new File(fileTransfer.getFilePath()).getName();
+                //将文件存储至指定位置
+                file = new File(Environment.getExternalStorageDirectory() + "/" + name);
+                fileOutputStream = new FileOutputStream(file);
+                startCallback();
+                byte[] buf = new byte[512];
+                int len;
+                while ((len = inputStream.read(buf)) != -1) {
+                    fileOutputStream.write(buf, 0, len);
+                    total += len;
+                }
+                Log.e(TAG, "文件接收成功");
+                stopCallback();
+                if (progressChangListener != null) {
+                    //因为上面在计算文件传输进度时因为小数点问题可能不会显示到100%，所以此处手动将之设为100%
+                    progressChangListener.onProgressChanged(fileTransfer, 0, 100, 0, 0, 0, 0);
+                    //开始计算传输到本地的文件的MD5码
+                    progressChangListener.onStartComputeMD5();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "文件接收 Exception: " + e.getMessage());
+                exception = e;
+            } finally {
+                FileTransfer transfer = new FileTransfer();
+                if (file != null && file.exists()) {
+                    transfer.setFilePath(file.getPath());
+                    transfer.setFileSize(file.length());
+                    transfer.setMd5(Md5Util.getMd5(file));
+                    Log.e(TAG, "计算出的文件的MD5码是：" + transfer.getMd5());
+                }
+                if (exception != null) {
                     if (progressChangListener != null) {
-                        progressChangListener.onProgressChanged(fileTransfer, progress, speed, remainingTime);
+                        progressChangListener.onTransferFailed(transfer, exception);
+                    }
+                } else {
+                    if (progressChangListener != null && fileTransfer != null) {
+                        if (fileTransfer.getMd5().equals(transfer.getMd5())) {
+                            progressChangListener.onTransferSucceed(transfer);
+                        } else {
+                            //如果本地计算出的MD5码和文件发送端传来的值不一致，则认为传输失败
+                            progressChangListener.onTransferFailed(transfer, new Exception("MD5码不一致"));
+                        }
                     }
                 }
+                clean();
+                //再次启动服务，等待客户端下次连接
+                startActionTransfer(this);
             }
-            progressChangListener.onProgressChanged(fileTransfer, 100, 0, 0);
-            serverSocket.close();
-            inputStream.close();
-            objectInputStream.close();
-            fileOutputStream.close();
-            serverSocket = null;
-            inputStream = null;
-            objectInputStream = null;
-            fileOutputStream = null;
-            Log.e(TAG, "文件接收成功");
-        } catch (Exception e) {
-            Log.e(TAG, "文件接收 Exception: " + e.getMessage());
-        } finally {
-            clean();
-            if (progressChangListener != null) {
-                FileTransfer fileTransfer = new FileTransfer();
-                if (file != null && file.exists()) {
-                    String md5 = Md5Util.getMd5(file);
-                    fileTransfer.setFilePath(file.getPath());
-                    fileTransfer.setFileLength(file.length());
-                    fileTransfer.setMd5(md5);
-                    Log.e(TAG, "文件的MD5码是：" + md5);
-                }
-                progressChangListener.onTransferFinished(fileTransfer);
-            }
-            //再次启动服务，等待客户端下次连接
-            startService(new Intent(this, FileReceiverService.class));
         }
     }
 ```
@@ -238,41 +176,85 @@ Ap热点开启成功后，就可以启动一个服务在后台等待文件发送
 在界面层刷新UI
 
 ```java
-private FileReceiverService.OnProgressChangListener progressChangListener = new FileReceiverService.OnProgressChangListener() {
+private FileReceiverService.OnReceiveProgressChangListener progressChangListener = new FileReceiverService.OnReceiveProgressChangListener() {
 
         private FileTransfer originFileTransfer;
 
         @Override
-        public void onProgressChanged(final FileTransfer fileTransfer, final int progress, final double speed, final long remainingTime) {
+        public void onProgressChanged(final FileTransfer fileTransfer, final long totalTime, final int progress, final double instantSpeed, final long instantRemainingTime, final double averageSpeed, final long averageRemainingTime) {
             this.originFileTransfer = fileTransfer;
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    progressDialog.setTitle("正在接收的文件： " + new File(fileTransfer.getFilePath()).getName());
-                    progressDialog.setMessage("原始文件的MD5码是：" + fileTransfer.getMd5()
-                            + "\n" + "传输速率：" + (int) speed + " Kb/s"
-                            + "\n" + "预估的剩余完成时间：" + remainingTime + " 秒");
-                    progressDialog.setProgress(progress);
-                    progressDialog.setCancelable(false);
-                    progressDialog.show();
+                    if (isCreated()) {
+                        progressDialog.setTitle("正在接收的文件： " + originFileTransfer.getFileName());
+                        if (progress != 100) {
+                            progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
+                                    + "\n\n" + "总的传输时间：" + totalTime + " 秒"
+                                    + "\n\n" + "瞬时-传输速率：" + (int) instantSpeed + " Kb/s"
+                                    + "\n" + "瞬时-预估的剩余完成时间：" + instantRemainingTime + " 秒"
+                                    + "\n\n" + "平均-传输速率：" + (int) averageSpeed + " Kb/s"
+                                    + "\n" + "平均-预估的剩余完成时间：" + averageRemainingTime + " 秒"
+                            );
+                        }
+                        progressDialog.setProgress(progress);
+                        progressDialog.setCancelable(true);
+                        progressDialog.show();
+                    }
                 }
             });
         }
 
         @Override
-        public void onTransferFinished(final FileTransfer fileTransfer) {
+        public void onStartComputeMD5() {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    progressDialog.setTitle("传输结束");
-                    progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
-                            + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
-                            + "\n" + "文件位置：" + fileTransfer.getFilePath());
-                    progressDialog.setCancelable(true);
+                    if (isCreated()) {
+                        progressDialog.setTitle("传输结束，正在计算本地文件的MD5码以校验文件完整性");
+                        progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5());
+                        progressDialog.setCancelable(false);
+                        progressDialog.show();
+                    }
                 }
             });
         }
 
+        @Override
+        public void onTransferSucceed(final FileTransfer fileTransfer) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (isCreated()) {
+                        progressDialog.setTitle("传输成功");
+                        progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
+                                + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
+                                + "\n" + "文件位置：" + fileTransfer.getFilePath());
+                        progressDialog.setCancelable(true);
+                        progressDialog.show();
+                        Glide.with(FileReceiverActivity.this).load(fileTransfer.getFilePath()).into(iv_image);
+                    }
+                }
+            });
+        }
+
+        @Override
+        public void onTransferFailed(final FileTransfer fileTransfer, final Exception e) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (isCreated()) {
+                        progressDialog.setTitle("传输失败");
+                        progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
+                                + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
+                                + "\n" + "文件位置：" + fileTransfer.getFilePath()
+                                + "\n" + "异常信息：" + e.getMessage());
+                        progressDialog.setCancelable(true);
+                        progressDialog.show();
+                    }
+                }
+            });
+        }
     };
 ```
 
@@ -333,201 +315,114 @@ private FileReceiverService.OnProgressChangListener progressChangListener = new 
 
 连接到指定Wifi后，在选择了要发送的文件后，就启动一个后台线程去主动请求连接服务器端，然后就是进行实际的文件传输操作了
 
-发起选取文件请求的方法
+demo 提供的例子是只用来传输图片，但理论上是可以传输任意格式的文件的
 
 ```java
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*");
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(intent, CODE_CHOOSE_FILE);
+      private void navToChose() {
+        Matisse.from(this)
+                .choose(MimeType.ofImage())
+                .countable(true)
+                .showSingleMediaType(true)
+                .maxSelectable(1)
+                .capture(false)
+                .captureStrategy(new CaptureStrategy(true, BuildConfig.APPLICATION_ID + ".fileprovider"))
+                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
+                .thumbnailScale(0.70f)
+                .imageEngine(new Glide4Engine())
+                .forResult(CODE_CHOOSE_FILE);
+    }
 ```
 
-获取选取的文件的实际路径，并启动 AsyncTask 去进行文件传输操作
+获取选取的文件的实际路径，并启动 FileSenderService 去进行文件传输操作
 
 ```java
-    @Override
+     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == CODE_CHOOSE_FILE && resultCode == RESULT_OK) {
-            Uri uri = data.getData();
-            if (uri != null) {
-                String path = getPath(this, uri);
-                if (path != null) {
-                    File file = new File(path);
-                    if (file.exists()) {
-                        FileTransfer fileTransfer = new FileTransfer(file.getPath(), file.length());
-                        Log.e(TAG, "待发送的文件：" + fileTransfer);
-                        new FileSenderTask(this, fileTransfer).execute(WifiLManager.getHotspotIpAddress(this));
-                    }
+            List<String> strings = Matisse.obtainPathResult(data);
+            if (strings != null && !strings.isEmpty()) {
+                String path = strings.get(0);
+                File file = new File(path);
+                if (file.exists()) {
+                    FileTransfer fileTransfer = new FileTransfer(file);
+                    Log.e(TAG, "待发送的文件：" + fileTransfer);
+                    FileSenderService.startActionTransfer(this, fileTransfer, WifiLManager.getHotspotIpAddress(this));
                 }
             }
         }
-    }
-
-    private String getPath(Context context, Uri uri) {
-        if ("content".equalsIgnoreCase(uri.getScheme())) {
-            Cursor cursor = context.getContentResolver().query(uri, new String[]{"_data"}, null, null, null);
-            if (cursor != null) {
-                if (cursor.moveToFirst()) {
-                    String data = cursor.getString(cursor.getColumnIndex("_data"));
-                    cursor.close();
-                    return data;
-                }
-            }
-        } else if ("file".equalsIgnoreCase(uri.getScheme())) {
-            return uri.getPath();
-        }
-        return null;
     }
 ```
 
-将服务器端的IP地址作为参数传给 FileSenderTask ，在正式发送文件前，先发送包含文件信息的 FileTransfer ，并在发送文件的过程中实时更新文件传输状态
+将服务器端的IP地址作为参数传给 FileSenderService，在正式发送文件前，先发送包含文件信息的 FileTransfer ，并在发送文件的过程中实时更新文件传输状态
 
 ```java
-/**
- * 作者：chenZY
- * 时间：2018/2/24 10:21
- * 描述：
- */
-public class FileSenderTask extends AsyncTask<String, Double, Boolean> {
-
-    private ProgressDialog progressDialog;
-
-    private FileTransfer fileTransfer;
-
-    private static final String TAG = "FileSenderTask";
-
-    public FileSenderTask(Context context, FileTransfer fileTransfer) {
-        this.fileTransfer = fileTransfer;
-        progressDialog = new ProgressDialog(context);
-        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        progressDialog.setCancelable(false);
-        progressDialog.setCanceledOnTouchOutside(false);
-        progressDialog.setTitle("发送文件：" + fileTransfer.getFilePath());
-        progressDialog.setMax(100);
-    }
-
-    @Override
-    protected void onPreExecute() {
-        progressDialog.show();
-    }
-
-    @Override
-    protected Boolean doInBackground(String... strings) {
-        Logger.e(TAG, "开始计算文件的MD5码");
-        fileTransfer.setMd5(Md5Util.getMd5(new File(fileTransfer.getFilePath())));
-        Log.e(TAG, "计算结束，文件的MD5码值是：" + fileTransfer.getMd5());
-        Socket socket = null;
-        OutputStream outputStream = null;
-        ObjectOutputStream objectOutputStream = null;
-        InputStream inputStream = null;
-        try {
-            socket = new Socket();
-            socket.bind(null);
-            socket.connect((new InetSocketAddress(strings[0], Constants.PORT)), 10000);
-            outputStream = socket.getOutputStream();
-            objectOutputStream = new ObjectOutputStream(outputStream);
-            objectOutputStream.writeObject(fileTransfer);
-            inputStream = new FileInputStream(new File(fileTransfer.getFilePath()));
-            byte buf[] = new byte[512];
-            int len;
-            //文件大小
-            long fileSize = fileTransfer.getFileLength();
-            //当前的传输进度
-            double progress;
-            //总的已传输字节数
-            long total = 0;
-            //缓存-当次更新进度时的时间
-            long tempTime = System.currentTimeMillis();
-            //缓存-当次更新进度时已传输的总字节数
-            long tempTotal = 0;
-            //传输速率（Kb/s）
-            double speed;
-            //预估的剩余完成时间（秒）
-            double remainingTime;
-            while ((len = inputStream.read(buf)) != -1) {
-                outputStream.write(buf, 0, len);
-                total += len;
-                long time = System.currentTimeMillis() - tempTime;
-                //每一秒更新一次传输速率和传输进度
-                if (time > 1000) {
-                    //当前的传输进度
-                    progress = total * 100 / fileSize;
-                    Logger.e(TAG, "---------------------------");
-                    Logger.e(TAG, "传输进度: " + progress);
-                    Logger.e(TAG, "时间变化：" + time / 1000.0);
-                    Logger.e(TAG, "字节变化：" + (total - tempTotal));
-                    //计算传输速率，字节转Kb，毫秒转秒
-                    speed = ((total - tempTotal) / 1024.0 / (time / 1000.0));
-                    //预估的剩余完成时间
-                    remainingTime = (fileSize - total) / 1024.0 / speed;
-                    publishProgress(progress, speed, remainingTime);
-                    Logger.e(TAG, "传输速率：" + speed);
-                    Logger.e(TAG, "预估的剩余完成时间：" + remainingTime);
-                    //缓存-当次更新进度时已传输的总字节数
-                    tempTotal = total;
-                    //缓存-当次更新进度时的时间
-                    tempTime = System.currentTimeMillis();
-                }
+ @Override
+    protected void onHandleIntent(Intent intent) {
+        if (intent != null && ACTION_START_SEND.equals(intent.getAction())) {
+            clean();
+            fileTransfer = (FileTransfer) intent.getSerializableExtra(EXTRA_PARAM_FILE_TRANSFER);
+            String ipAddress = intent.getStringExtra(EXTRA_PARAM_IP_ADDRESS);
+            Log.e(TAG, "IP地址：" + ipAddress);
+            if (fileTransfer == null || TextUtils.isEmpty(ipAddress)) {
+                return;
             }
-            outputStream.close();
-            objectOutputStream.close();
-            inputStream.close();
-            socket.close();
-            outputStream = null;
-            objectOutputStream = null;
-            inputStream = null;
-            socket = null;
-            Log.e(TAG, "文件发送成功");
-            return true;
-        } catch (Exception e) {
-            Log.e(TAG, "文件发送异常 Exception: " + e.getMessage());
-            return false;
-        } finally {
-            if (outputStream != null) {
+            if (TextUtils.isEmpty(fileTransfer.getMd5())) {
+                Logger.e(TAG, "MD5码为空，开始计算文件的MD5码");
+                if (progressChangListener != null) {
+                    progressChangListener.onStartComputeMD5();
+                }
+                fileTransfer.setMd5(Md5Util.getMd5(new File(fileTransfer.getFilePath())));
+                Log.e(TAG, "计算结束，文件的MD5码值是：" + fileTransfer.getMd5());
+            } else {
+                Logger.e(TAG, "MD5码不为空，无需再次计算，MD5码为：" + fileTransfer.getMd5());
+            }
+            int index = 0;
+            while (ipAddress.equals("0.0.0.0") && index < 5) {
+                Log.e(TAG, "ip: " + ipAddress);
+                ipAddress = WifiLManager.getHotspotIpAddress(this);
+                index++;
                 try {
-                    outputStream.close();
-                } catch (IOException e) {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-            if (objectOutputStream != null) {
-                try {
-                    objectOutputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            if (ipAddress.equals("0.0.0.0")) {
+                return;
             }
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+            try {
+                socket = new Socket();
+                socket.bind(null);
+                socket.connect((new InetSocketAddress(ipAddress, Constants.PORT)), 20000);
+                outputStream = socket.getOutputStream();
+                objectOutputStream = new ObjectOutputStream(outputStream);
+                objectOutputStream.writeObject(fileTransfer);
+                inputStream = new FileInputStream(new File(fileTransfer.getFilePath()));
+                startCallback();
+                byte[] buf = new byte[512];
+                int len;
+                while ((len = inputStream.read(buf)) != -1) {
+                    outputStream.write(buf, 0, len);
+                    total += len;
                 }
-            }
-            if (socket != null) {
-                try {
-                    socket.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                Log.e(TAG, "文件发送成功");
+                stopCallback();
+                if (progressChangListener != null) {
+                    //因为上面在计算文件传输进度时因为小数点问题可能不会显示到100%，所以此处手动将之设为100%
+                    progressChangListener.onProgressChanged(fileTransfer, 0, 100, 0, 0, 0, 0);
+                    progressChangListener.onTransferSucceed(fileTransfer);
                 }
+            } catch (Exception e) {
+                Log.e(TAG, "文件发送异常 Exception: " + e.getMessage());
+                if (progressChangListener != null) {
+                    progressChangListener.onTransferFailed(fileTransfer, e);
+                }
+            } finally {
+                clean();
             }
         }
     }
-
-    @Override
-    protected void onProgressUpdate(Double... values) {
-        progressDialog.setProgress(values[0].intValue());
-        progressDialog.setTitle("传输速率：" + values[1].intValue() + "Kb/s" + "\n"
-                + "预计剩余完成时间：" + values[2].longValue() + "秒");
-    }
-
-    @Override
-    protected void onPostExecute(Boolean aBoolean) {
-        progressDialog.cancel();
-        Log.e(TAG, "onPostExecute: " + aBoolean);
-    }
-
-}
 ```
 
 ### 四、校验文件完整性
