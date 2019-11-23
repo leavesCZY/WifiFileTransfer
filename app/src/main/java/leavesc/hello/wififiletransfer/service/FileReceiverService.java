@@ -6,9 +6,10 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.IBinder;
-import androidx.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
+
+import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import leavesc.hello.wififiletransfer.BuildConfig;
 import leavesc.hello.wififiletransfer.common.Constants;
 import leavesc.hello.wififiletransfer.common.Logger;
 import leavesc.hello.wififiletransfer.common.Md5Util;
@@ -36,7 +38,7 @@ import leavesc.hello.wififiletransfer.model.FileTransfer;
  */
 public class FileReceiverService extends IntentService {
 
-    private static final String ACTION_START_RECEIVE = "com.czy.wififiletransfer.service.action.startReceive";
+    private static final String ACTION_START_RECEIVE = BuildConfig.APPLICATION_ID + ".service.action.startReceive";
 
     private static final String TAG = "FileReceiverService";
 
@@ -114,7 +116,7 @@ public class FileReceiverService extends IntentService {
     private long tempTotal = 0;
 
     //计算瞬时传输速率的间隔时间
-    private static final int PERIOD = 2;
+    private static final int PERIOD = 400;
 
     //传输操作开始时间
     private Date startTime;
@@ -123,15 +125,10 @@ public class FileReceiverService extends IntentService {
     private boolean running;
 
     private void startCallback() {
+        stopCallback();
         startTime = new Date();
         running = true;
-        if (callbackService != null) {
-            if (!callbackService.isShutdown()) {
-                callbackService.shutdown();
-            }
-            callbackService = null;
-        }
-        callbackService = Executors.newScheduledThreadPool(2);
+        callbackService = Executors.newScheduledThreadPool(1);
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -176,15 +173,15 @@ public class FileReceiverService extends IntentService {
                 }
             }
         };
-        //1秒钟之后每隔 PERIOD 秒钟执行一次任务 runnable（定时任务内部要捕获可能发生的异常，否则如果异常抛出到上层的话，会导致定时任务停止）
-        callbackService.scheduleAtFixedRate(runnable, 1, PERIOD, TimeUnit.SECONDS);
+        //每隔 PERIOD 毫秒执行一次任务 runnable（定时任务内部要捕获可能发生的异常，否则如果异常抛出到上层的话，会导致定时任务停止）
+        callbackService.scheduleAtFixedRate(runnable, 0, PERIOD, TimeUnit.MILLISECONDS);
     }
 
     private void stopCallback() {
         running = false;
         if (callbackService != null) {
             if (!callbackService.isShutdown()) {
-                callbackService.shutdown();
+                callbackService.shutdownNow();
             }
             callbackService = null;
         }
@@ -218,7 +215,7 @@ public class FileReceiverService extends IntentService {
                 file = new File(Environment.getExternalStorageDirectory() + "/" + name);
                 fileOutputStream = new FileOutputStream(file);
                 startCallback();
-                byte buf[] = new byte[512];
+                byte[] buf = new byte[512];
                 int len;
                 while ((len = inputStream.read(buf)) != -1) {
                     fileOutputStream.write(buf, 0, len);
@@ -248,7 +245,7 @@ public class FileReceiverService extends IntentService {
                         progressChangListener.onTransferFailed(transfer, exception);
                     }
                 } else {
-                    if (progressChangListener != null) {
+                    if (progressChangListener != null && fileTransfer != null) {
                         if (fileTransfer.getMd5().equals(transfer.getMd5())) {
                             progressChangListener.onTransferSucceed(transfer);
                         } else {
@@ -271,7 +268,7 @@ public class FileReceiverService extends IntentService {
     }
 
     private void clean() {
-        if (serverSocket != null) {
+        if (serverSocket != null && !serverSocket.isClosed()) {
             try {
                 serverSocket.close();
                 serverSocket = null;

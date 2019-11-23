@@ -5,9 +5,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
-import androidx.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
+
+import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,6 +23,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import leavesc.hello.wififiletransfer.BuildConfig;
 import leavesc.hello.wififiletransfer.common.Constants;
 import leavesc.hello.wififiletransfer.common.Logger;
 import leavesc.hello.wififiletransfer.common.Md5Util;
@@ -46,11 +48,11 @@ public class FileSenderService extends IntentService {
 
     private OnSendProgressChangListener progressChangListener;
 
-    private static final String ACTION_START_SEND = "com.czy.wififiletransfer.service.action.startSend";
+    private static final String ACTION_START_SEND = BuildConfig.APPLICATION_ID + ".service.action.startSend";
 
-    private static final String EXTRA_PARAM_FILE_TRANSFER = "com.czy.wififiletransfer.service.extra.FileTransfer";
+    private static final String EXTRA_PARAM_FILE_TRANSFER = BuildConfig.APPLICATION_ID + ".service.extra.FileTransfer";
 
-    private static final String EXTRA_PARAM_IP_ADDRESS = "com.czy.wififiletransfer.service.extra.IpAddress";
+    private static final String EXTRA_PARAM_IP_ADDRESS = BuildConfig.APPLICATION_ID + ".service.extra.IpAddress";
 
     private static final String TAG = "FileSenderService";
 
@@ -118,20 +120,15 @@ public class FileSenderService extends IntentService {
     private long tempTotal = 0;
 
     //计算瞬时传输速率的间隔时间
-    private static final int PERIOD = 2;
+    private static final int PERIOD = 400;
 
     //传输操作开始时间
     private Date startTime;
 
     private void startCallback() {
+        stopCallback();
         startTime = new Date();
-        if (callbackService != null) {
-            if (!callbackService.isShutdown()) {
-                callbackService.shutdown();
-            }
-            callbackService = null;
-        }
-        callbackService = Executors.newScheduledThreadPool(2);
+        callbackService = Executors.newScheduledThreadPool(1);
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -176,14 +173,14 @@ public class FileSenderService extends IntentService {
                 }
             }
         };
-        //1秒钟之后每隔 PERIOD 秒钟执行一次任务 runnable（定时任务内部要捕获可能发生的异常，否则如果异常抛出到上层的话，会导致定时任务停止）
-        callbackService.scheduleAtFixedRate(runnable, 1, PERIOD, TimeUnit.SECONDS);
+        //每隔 PERIOD 毫秒执行一次任务 runnable（定时任务内部要捕获可能发生的异常，否则如果异常抛出到上层的话，会导致定时任务停止）
+        callbackService.scheduleAtFixedRate(runnable, 0, PERIOD, TimeUnit.MILLISECONDS);
     }
 
     private void stopCallback() {
         if (callbackService != null) {
             if (!callbackService.isShutdown()) {
-                callbackService.shutdown();
+                callbackService.shutdownNow();
             }
             callbackService = null;
         }
@@ -232,7 +229,7 @@ public class FileSenderService extends IntentService {
                 objectOutputStream.writeObject(fileTransfer);
                 inputStream = new FileInputStream(new File(fileTransfer.getFilePath()));
                 startCallback();
-                byte buf[] = new byte[512];
+                byte[] buf = new byte[512];
                 int len;
                 while ((len = inputStream.read(buf)) != -1) {
                     outputStream.write(buf, 0, len);
@@ -260,11 +257,10 @@ public class FileSenderService extends IntentService {
     public void onDestroy() {
         super.onDestroy();
         clean();
-        Log.e(TAG, "onDestroy");
     }
 
     public void clean() {
-        if (socket != null) {
+        if (socket != null && !socket.isClosed()) {
             try {
                 socket.close();
                 socket = null;

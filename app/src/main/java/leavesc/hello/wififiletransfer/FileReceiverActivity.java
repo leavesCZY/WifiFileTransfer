@@ -1,28 +1,27 @@
 package leavesc.hello.wififiletransfer;
 
 import android.app.ProgressDialog;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
 import android.webkit.MimeTypeMap;
+import android.widget.ImageView;
+import android.widget.TextView;
 
-import leavesc.hello.wififiletransfer.common.Constants;
-import leavesc.hello.wififiletransfer.common.Logger;
-import leavesc.hello.wififiletransfer.manager.ApManager;
-import leavesc.hello.wififiletransfer.model.FileTransfer;
-import leavesc.hello.wififiletransfer.service.FileReceiverService;
+import com.bumptech.glide.Glide;
 
 import java.io.File;
+import java.text.MessageFormat;
 import java.util.Locale;
+
+import leavesc.hello.wififiletransfer.common.Constants;
+import leavesc.hello.wififiletransfer.model.FileTransfer;
+import leavesc.hello.wififiletransfer.service.FileReceiverService;
 
 /**
  * 作者：chenZY
@@ -32,40 +31,27 @@ import java.util.Locale;
  */
 public class FileReceiverActivity extends BaseActivity {
 
-    private FileReceiverService mFileReceiverService;
+    private FileReceiverService fileReceiverService;
 
     private ProgressDialog progressDialog;
 
     private static final String TAG = "ReceiverActivity";
-
-    private BroadcastReceiver wifiBroadcastReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            //便携式热点的状态为：10---正在关闭；11---已关闭；12---正在开启；13---已开启
-            int state = intent.getIntExtra("wifi_state", 0);
-            Logger.e(TAG, "接受到Wifi热点变化的广播： " + state);
-            if (state == 11) {
-                showToast("Wifi热点已关闭");
-            } else if (state == 13) {
-                showToast("Wifi热点已开启");
-            }
-        }
-    };
 
     private ServiceConnection serviceConnection = new ServiceConnection() {
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             FileReceiverService.MyBinder binder = (FileReceiverService.MyBinder) service;
-            mFileReceiverService = binder.getService();
-            mFileReceiverService.setProgressChangListener(progressChangListener);
-            if (!mFileReceiverService.isRunning()) {
+            fileReceiverService = binder.getService();
+            fileReceiverService.setProgressChangListener(progressChangListener);
+            if (!fileReceiverService.isRunning()) {
                 FileReceiverService.startActionTransfer(FileReceiverActivity.this);
             }
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            mFileReceiverService = null;
+            fileReceiverService = null;
             bindService(FileReceiverService.class, serviceConnection);
         }
     };
@@ -80,7 +66,7 @@ public class FileReceiverActivity extends BaseActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (!isFinishingOrDestroyed()) {
+                    if (isCreated()) {
                         progressDialog.setTitle("正在接收的文件： " + originFileTransfer.getFileName());
                         if (progress != 100) {
                             progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
@@ -104,7 +90,7 @@ public class FileReceiverActivity extends BaseActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (!isFinishingOrDestroyed()) {
+                    if (isCreated()) {
                         progressDialog.setTitle("传输结束，正在计算本地文件的MD5码以校验文件完整性");
                         progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5());
                         progressDialog.setCancelable(false);
@@ -119,14 +105,14 @@ public class FileReceiverActivity extends BaseActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (!isFinishingOrDestroyed()) {
+                    if (isCreated()) {
                         progressDialog.setTitle("传输成功");
                         progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
                                 + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
                                 + "\n" + "文件位置：" + fileTransfer.getFilePath());
                         progressDialog.setCancelable(true);
                         progressDialog.show();
-                        openFile(fileTransfer.getFilePath());
+                        Glide.with(FileReceiverActivity.this).load(fileTransfer.getFilePath()).into(iv_image);
                     }
                 }
             });
@@ -137,7 +123,7 @@ public class FileReceiverActivity extends BaseActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (!isFinishingOrDestroyed()) {
+                    if (isCreated()) {
                         progressDialog.setTitle("传输失败");
                         progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
                                 + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
@@ -151,18 +137,21 @@ public class FileReceiverActivity extends BaseActivity {
         }
     };
 
+    private ImageView iv_image;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(leavesc.hello.wififiletransfer.R.layout.activity_file_receiver);
+        setContentView(R.layout.activity_file_receiver);
         initView();
-        IntentFilter intentFilter = new IntentFilter("android.net.wifi.WIFI_AP_STATE_CHANGED");
-        registerReceiver(wifiBroadcastReceiver, intentFilter);
         bindService(FileReceiverService.class, serviceConnection);
     }
 
     private void initView() {
         setTitle("接收文件");
+        iv_image = findViewById(R.id.iv_image);
+        TextView tv_hint = findViewById(R.id.tv_hint);
+        tv_hint.setText(MessageFormat.format("接收文件前，需要先主动开启Wifi热点让文件发送端连接\n热点名：{0}\n密码：{1}", Constants.AP_SSID, Constants.AP_PASSWORD));
         progressDialog = new ProgressDialog(this);
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.setCancelable(false);
@@ -171,38 +160,16 @@ public class FileReceiverActivity extends BaseActivity {
         progressDialog.setMax(100);
     }
 
-    public void openAp(View view) {
-        if (ApManager.isApOn(this)) {
-            String[] params = ApManager.getApSSIDAndPwd(this);
-            if (params != null && params.length == 2 && Constants.AP_SSID.equals(params[0]) && Constants.AP_PASSWORD.equals(params[1])) {
-                showToast("Wifi热点已开启");
-                return;
-            }
-        }
-        ApManager.openAp(this, Constants.AP_SSID, Constants.AP_PASSWORD);
-        bindService(FileReceiverService.class, serviceConnection);
-        showToast("正在开启Wifi热点");
-    }
-
-    public void closeAp(View view) {
-        ApManager.closeAp(this);
-        unbindService(serviceConnection);
-        mFileReceiverService = null;
-        stopService(new Intent(this, FileReceiverService.class));
-        showToast("Wifi热点已关闭");
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mFileReceiverService != null) {
-            mFileReceiverService.setProgressChangListener(null);
+        if (fileReceiverService != null) {
+            fileReceiverService.setProgressChangListener(null);
             unbindService(serviceConnection);
         }
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
-        unregisterReceiver(wifiBroadcastReceiver);
     }
 
     private void openFile(String filePath) {

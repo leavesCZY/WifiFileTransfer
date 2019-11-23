@@ -1,14 +1,14 @@
 package leavesc.hello.wififiletransfer;
 
-
 import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.widget.Toast;
+
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import android.widget.Toast;
 
 /**
  * 作者：chenZY
@@ -38,8 +38,8 @@ public class BaseActivity extends AppCompatActivity {
         startActivity(new Intent(this, c));
     }
 
-    protected boolean isFinishingOrDestroyed() {
-        return isFinishing() || isDestroyed();
+    protected boolean isCreated() {
+        return !isFinishing() && !isDestroyed();
     }
 
 }

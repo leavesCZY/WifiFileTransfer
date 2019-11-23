@@ -1,5 +1,7 @@
 package leavesc.hello.wififiletransfer.model;
 
+import androidx.annotation.NonNull;
+
 import java.io.File;
 import java.io.Serializable;
 
@@ -65,6 +67,7 @@ public class FileTransfer implements Serializable {
         this.md5 = md5;
     }
 
+    @NonNull
     @Override
     public String toString() {
         return "FileTransfer{" +

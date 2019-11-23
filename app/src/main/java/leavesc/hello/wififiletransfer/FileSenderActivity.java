@@ -2,19 +2,25 @@ package leavesc.hello.wififiletransfer;
 
 import android.app.ProgressDialog;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.database.Cursor;
-import android.net.Uri;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
+
+import com.zhihu.matisse.Matisse;
+import com.zhihu.matisse.MimeType;
+import com.zhihu.matisse.internal.entity.CaptureStrategy;
 
 import java.io.File;
+import java.text.MessageFormat;
+import java.util.List;
 
 import leavesc.hello.wififiletransfer.common.Constants;
+import leavesc.hello.wififiletransfer.common.Glide4Engine;
 import leavesc.hello.wififiletransfer.manager.WifiLManager;
 import leavesc.hello.wififiletransfer.model.FileTransfer;
 import leavesc.hello.wififiletransfer.service.FileSenderService;
@@ -42,7 +48,7 @@ public class FileSenderActivity extends BaseActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (!isFinishingOrDestroyed()) {
+                    if (isCreated()) {
                         progressDialog.setTitle("发送文件");
                         progressDialog.setMessage("正在计算文件的MD5码");
                         progressDialog.setMax(100);
@@ -59,7 +65,7 @@ public class FileSenderActivity extends BaseActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (!isFinishingOrDestroyed()) {
+                    if (isCreated()) {
                         progressDialog.setTitle("正在发送文件： " + new File(fileTransfer.getFilePath()).getName());
                         if (progress != 100) {
                             progressDialog.setMessage("文件的MD5码：" + fileTransfer.getMd5()
@@ -83,7 +89,7 @@ public class FileSenderActivity extends BaseActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (!isFinishingOrDestroyed()) {
+                    if (isCreated()) {
                         progressDialog.setTitle("文件发送成功");
                         progressDialog.setCancelable(true);
                         progressDialog.show();
@@ -97,7 +103,7 @@ public class FileSenderActivity extends BaseActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (!isFinishingOrDestroyed()) {
+                    if (isCreated()) {
                         progressDialog.setTitle("文件发送失败");
                         progressDialog.setMessage("异常信息： " + e.getMessage());
                         progressDialog.setCancelable(true);
@@ -129,13 +135,15 @@ public class FileSenderActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(leavesc.hello.wififiletransfer.R.layout.activity_file_sender);
+        setContentView(R.layout.activity_file_sender);
         initView();
         bindService(FileSenderService.class, serviceConnection);
     }
 
     private void initView() {
         setTitle("发送文件");
+        TextView tv_hint = findViewById(R.id.tv_hint);
+        tv_hint.setText(MessageFormat.format("在发送文件前需要先连上文件接收端开启的Wifi热点\n热点名：{0} \n密码：{1}", Constants.AP_SSID, Constants.AP_PASSWORD));
         progressDialog = new ProgressDialog(this);
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.setCancelable(false);
@@ -160,44 +168,38 @@ public class FileSenderActivity extends BaseActivity {
             showToast("当前连接的Wifi并非文件接收端开启的Wifi热点，请重试");
             return;
         }
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*");
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(intent, CODE_CHOOSE_FILE);
+        navToChose();
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == CODE_CHOOSE_FILE && resultCode == RESULT_OK) {
-            Uri uri = data.getData();
-            if (uri != null) {
-                String path = getPath(this, uri);
-                if (path != null) {
-                    File file = new File(path);
-                    if (file.exists()) {
-                        FileTransfer fileTransfer = new FileTransfer(file);
-                        Log.e(TAG, "待发送的文件：" + fileTransfer);
-                        FileSenderService.startActionTransfer(this, fileTransfer, WifiLManager.getHotspotIpAddress(this));
-                    }
+            List<String> strings = Matisse.obtainPathResult(data);
+            if (strings != null && !strings.isEmpty()) {
+                String path = strings.get(0);
+                File file = new File(path);
+                if (file.exists()) {
+                    FileTransfer fileTransfer = new FileTransfer(file);
+                    Log.e(TAG, "待发送的文件：" + fileTransfer);
+                    FileSenderService.startActionTransfer(this, fileTransfer, WifiLManager.getHotspotIpAddress(this));
                 }
             }
         }
     }
 
-    private String getPath(Context context, Uri uri) {
-        if ("content".equalsIgnoreCase(uri.getScheme())) {
-            Cursor cursor = context.getContentResolver().query(uri, new String[]{"_data"}, null, null, null);
-            if (cursor != null) {
-                if (cursor.moveToFirst()) {
-                    String data = cursor.getString(cursor.getColumnIndex("_data"));
-                    cursor.close();
-                    return data;
-                }
-            }
-        } else if ("file".equalsIgnoreCase(uri.getScheme())) {
-            return uri.getPath();
-        }
-        return null;
+    private void navToChose() {
+        Matisse.from(this)
+                .choose(MimeType.ofImage())
+                .countable(true)
+                .showSingleMediaType(true)
+                .maxSelectable(1)
+                .capture(false)
+                .captureStrategy(new CaptureStrategy(true, BuildConfig.APPLICATION_ID + ".fileprovider"))
+                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
+                .thumbnailScale(0.70f)
+                .imageEngine(new Glide4Engine())
+                .forResult(CODE_CHOOSE_FILE);
     }
 
 }
