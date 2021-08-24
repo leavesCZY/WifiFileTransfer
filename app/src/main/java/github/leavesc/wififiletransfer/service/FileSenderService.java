@@ -1,4 +1,4 @@
-package leavesc.hello.wififiletransfer.service;
+package github.leavesc.wififiletransfer.service;
 
 import android.app.IntentService;
 import android.content.Context;
@@ -23,18 +23,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import leavesc.hello.wififiletransfer.BuildConfig;
-import leavesc.hello.wififiletransfer.common.Constants;
-import leavesc.hello.wififiletransfer.common.Logger;
-import leavesc.hello.wififiletransfer.common.Md5Util;
-import leavesc.hello.wififiletransfer.manager.WifiLManager;
-import leavesc.hello.wififiletransfer.model.FileTransfer;
+import github.leavesc.wififiletransfer.BuildConfig;
+import github.leavesc.wififiletransfer.common.Constants;
+import github.leavesc.wififiletransfer.common.Logger;
+import github.leavesc.wififiletransfer.common.Md5Util;
+import github.leavesc.wififiletransfer.manager.WifiLManager;
+import github.leavesc.wififiletransfer.model.FileTransfer;
 
 /**
- * 作者：chenZY
- * 时间：2018/4/3 17:32
- * 描述：https://www.jianshu.com/u/9df45b87cfdf
- * https://github.com/leavesC
+ * @Author: leavesC
+ * @Date: 2018/4/3 17:32
+ * @Desc:
+ * @Github：https://github.com/leavesC
  */
 public class FileSenderService extends IntentService {
 
@@ -129,47 +129,44 @@ public class FileSenderService extends IntentService {
         stopCallback();
         startTime = new Date();
         callbackService = Executors.newScheduledThreadPool(1);
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                if (fileTransfer != null) {
-                    //过去 PERIOD 秒内文件的瞬时传输速率（Kb/s）
-                    double instantSpeed = 0;
-                    //根据瞬时速率计算的-预估的剩余完成时间（秒）
-                    long instantRemainingTime = 0;
-                    //到现在所用的总的传输时间
-                    long totalTime = 0;
-                    //总的平均文件传输速率（Kb/s）
-                    double averageSpeed = 0;
-                    //根据总的平均传输速率计算的预估的剩余完成时间（秒）
-                    long averageRemainingTime = 0;
-                    //文件大小
-                    long fileSize = fileTransfer.getFileSize();
-                    //当前的传输进度
-                    int progress = (int) (total * 100 / fileSize);
-                    //距离上一次计算进度到现在之间新传输的字节数
-                    long temp = total - tempTotal;
-                    if (temp > 0) {
-                        instantSpeed = (temp / 1024.0 / PERIOD);
-                        instantRemainingTime = (long) ((fileSize - total) / 1024.0 / instantSpeed);
-                    }
-                    if (startTime != null) {
-                        totalTime = (new Date().getTime() - startTime.getTime()) / 1000;
-                        averageSpeed = (total / 1024.0 / totalTime);
-                        averageRemainingTime = (long) ((fileSize - total) / 1024.0 / averageSpeed);
-                    }
-                    tempTotal = total;
-                    Logger.e(TAG, "---------------------------");
-                    Logger.e(TAG, "传输进度（%）: " + progress);
-                    Logger.e(TAG, "所用时间：" + totalTime);
-                    Logger.e(TAG, "瞬时-传输速率（Kb/s）: " + instantSpeed);
-                    Logger.e(TAG, "瞬时-预估的剩余完成时间（秒）: " + instantRemainingTime);
-                    Logger.e(TAG, "平均-传输速率（Kb/s）: " + averageSpeed);
-                    Logger.e(TAG, "平均-预估的剩余完成时间（秒）: " + averageRemainingTime);
-                    Logger.e(TAG, "字节变化：" + temp);
-                    if (progressChangListener != null) {
-                        progressChangListener.onProgressChanged(fileTransfer, totalTime, progress, instantSpeed, instantRemainingTime, averageSpeed, averageRemainingTime);
-                    }
+        Runnable runnable = () -> {
+            if (fileTransfer != null) {
+                //过去 PERIOD 秒内文件的瞬时传输速率（Kb/s）
+                double instantSpeed = 0;
+                //根据瞬时速率计算的-预估的剩余完成时间（秒）
+                long instantRemainingTime = 0;
+                //到现在所用的总的传输时间
+                long totalTime = 0;
+                //总的平均文件传输速率（Kb/s）
+                double averageSpeed = 0;
+                //根据总的平均传输速率计算的预估的剩余完成时间（秒）
+                long averageRemainingTime = 0;
+                //文件大小
+                long fileSize = fileTransfer.getFileSize();
+                //当前的传输进度
+                int progress = (int) (total * 100 / fileSize);
+                //距离上一次计算进度到现在之间新传输的字节数
+                long temp = total - tempTotal;
+                if (temp > 0) {
+                    instantSpeed = (temp / 1024.0 / PERIOD);
+                    instantRemainingTime = (long) ((fileSize - total) / 1024.0 / instantSpeed);
+                }
+                if (startTime != null) {
+                    totalTime = (new Date().getTime() - startTime.getTime()) / 1000;
+                    averageSpeed = (total / 1024.0 / totalTime);
+                    averageRemainingTime = (long) ((fileSize - total) / 1024.0 / averageSpeed);
+                }
+                tempTotal = total;
+                Logger.e(TAG, "---------------------------");
+                Logger.e(TAG, "传输进度（%）: " + progress);
+                Logger.e(TAG, "所用时间：" + totalTime);
+                Logger.e(TAG, "瞬时-传输速率（Kb/s）: " + instantSpeed);
+                Logger.e(TAG, "瞬时-预估的剩余完成时间（秒）: " + instantRemainingTime);
+                Logger.e(TAG, "平均-传输速率（Kb/s）: " + averageSpeed);
+                Logger.e(TAG, "平均-预估的剩余完成时间（秒）: " + averageRemainingTime);
+                Logger.e(TAG, "字节变化：" + temp);
+                if (progressChangListener != null) {
+                    progressChangListener.onProgressChanged(fileTransfer, totalTime, progress, instantSpeed, instantRemainingTime, averageSpeed, averageRemainingTime);
                 }
             }
         };

@@ -1,6 +1,6 @@
-package leavesc.hello.wififiletransfer;
+package github.leavesc.wififiletransfer;
 
-import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -11,12 +11,11 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 /**
- * 作者：chenZY
- * 时间：2018/4/3 14:51
- * 描述：https://www.jianshu.com/u/9df45b87cfdf
- * https://github.com/leavesC
+ * @Author: leavesC
+ * @Date: 2018/4/3 14:51
+ * @Desc:
+ * @Github：https://github.com/leavesC
  */
-@SuppressLint("Registered")
 public class BaseActivity extends AppCompatActivity {
 
     protected void setTitle(String title) {
@@ -34,7 +33,7 @@ public class BaseActivity extends AppCompatActivity {
         bindService(new Intent(this, service), serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
-    protected void startActivity(Class c) {
+    protected <T extends Activity> void startActivity(Class<T> c) {
         startActivity(new Intent(this, c));
     }
 

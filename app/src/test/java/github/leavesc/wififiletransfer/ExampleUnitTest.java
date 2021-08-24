@@ -1,8 +1,8 @@
-package leavesc.hello.wififiletransfer;
-
-import org.junit.Test;
+package github.leavesc.wififiletransfer;
 
 import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
 
 /**
  * Example local unit test, which will execute on the development machine (host).

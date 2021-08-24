@@ -1,4 +1,4 @@
-package leavesc.hello.wififiletransfer.model;
+package github.leavesc.wififiletransfer.model;
 
 import androidx.annotation.NonNull;
 
@@ -6,10 +6,10 @@ import java.io.File;
 import java.io.Serializable;
 
 /**
- * 作者：chenZY
- * 时间：2018/4/3 15:10
- * 描述：https://www.jianshu.com/u/9df45b87cfdf
- * https://github.com/leavesC
+ * @Author: leavesC
+ * @Date: 2018/4/3 15:10
+ * @Desc:
+ * @Github：https://github.com/leavesC
  */
 public class FileTransfer implements Serializable {
 

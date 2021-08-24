@@ -1,4 +1,6 @@
-package leavesc.hello.wififiletransfer.manager;
+package github.leavesc.wififiletransfer.manager;
+
+import static android.content.Context.WIFI_SERVICE;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -11,13 +13,11 @@ import android.util.Log;
 
 import java.lang.reflect.Method;
 
-import static android.content.Context.WIFI_SERVICE;
-
 /**
- * 作者：chenZY
- * 时间：2018/4/3 15:05
- * 描述：https://www.jianshu.com/u/9df45b87cfdf
- * https://github.com/leavesC
+ * @Author: leavesC
+ * @Date: 2018/4/3 15:05
+ * @Desc:
+ * @Github：https://github.com/leavesC
  */
 public class ApManager {
 

@@ -1,4 +1,4 @@
-package leavesc.hello.wififiletransfer;
+package github.leavesc.wififiletransfer;
 
 import android.app.ProgressDialog;
 import android.content.ComponentName;
@@ -19,15 +19,15 @@ import java.io.File;
 import java.text.MessageFormat;
 import java.util.Locale;
 
-import leavesc.hello.wififiletransfer.common.Constants;
-import leavesc.hello.wififiletransfer.model.FileTransfer;
-import leavesc.hello.wififiletransfer.service.FileReceiverService;
+import github.leavesc.wififiletransfer.common.Constants;
+import github.leavesc.wififiletransfer.model.FileTransfer;
+import github.leavesc.wififiletransfer.service.FileReceiverService;
 
 /**
- * 作者：chenZY
- * 时间：2018/4/3 14:53
- * 描述：https://www.jianshu.com/u/9df45b87cfdf
- * https://github.com/leavesC
+ * @Author: leavesC
+ * @Date: 2018/4/3 14:53
+ * @Desc:
+ * @Github：https://github.com/leavesC
  */
 public class FileReceiverActivity extends BaseActivity {
 
@@ -37,7 +37,7 @@ public class FileReceiverActivity extends BaseActivity {
 
     private static final String TAG = "ReceiverActivity";
 
-    private ServiceConnection serviceConnection = new ServiceConnection() {
+    private final ServiceConnection serviceConnection = new ServiceConnection() {
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -56,82 +56,70 @@ public class FileReceiverActivity extends BaseActivity {
         }
     };
 
-    private FileReceiverService.OnReceiveProgressChangListener progressChangListener = new FileReceiverService.OnReceiveProgressChangListener() {
+    private final FileReceiverService.OnReceiveProgressChangListener progressChangListener = new FileReceiverService.OnReceiveProgressChangListener() {
 
         private FileTransfer originFileTransfer;
 
         @Override
         public void onProgressChanged(final FileTransfer fileTransfer, final long totalTime, final int progress, final double instantSpeed, final long instantRemainingTime, final double averageSpeed, final long averageRemainingTime) {
             this.originFileTransfer = fileTransfer;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (isCreated()) {
-                        progressDialog.setTitle("正在接收的文件： " + originFileTransfer.getFileName());
-                        if (progress != 100) {
-                            progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
-                                    + "\n\n" + "总的传输时间：" + totalTime + " 秒"
-                                    + "\n\n" + "瞬时-传输速率：" + (int) instantSpeed + " Kb/s"
-                                    + "\n" + "瞬时-预估的剩余完成时间：" + instantRemainingTime + " 秒"
-                                    + "\n\n" + "平均-传输速率：" + (int) averageSpeed + " Kb/s"
-                                    + "\n" + "平均-预估的剩余完成时间：" + averageRemainingTime + " 秒"
-                            );
-                        }
-                        progressDialog.setProgress(progress);
-                        progressDialog.setCancelable(true);
-                        progressDialog.show();
+            runOnUiThread(() -> {
+                if (isCreated()) {
+                    progressDialog.setTitle("正在接收的文件： " + originFileTransfer.getFileName());
+                    if (progress != 100) {
+                        progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
+                                + "\n\n" + "总的传输时间：" + totalTime + " 秒"
+                                + "\n\n" + "瞬时-传输速率：" + (int) instantSpeed + " Kb/s"
+                                + "\n" + "瞬时-预估的剩余完成时间：" + instantRemainingTime + " 秒"
+                                + "\n\n" + "平均-传输速率：" + (int) averageSpeed + " Kb/s"
+                                + "\n" + "平均-预估的剩余完成时间：" + averageRemainingTime + " 秒"
+                        );
                     }
+                    progressDialog.setProgress(progress);
+                    progressDialog.setCancelable(true);
+                    progressDialog.show();
                 }
             });
         }
 
         @Override
         public void onStartComputeMD5() {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (isCreated()) {
-                        progressDialog.setTitle("传输结束，正在计算本地文件的MD5码以校验文件完整性");
-                        progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5());
-                        progressDialog.setCancelable(false);
-                        progressDialog.show();
-                    }
+            runOnUiThread(() -> {
+                if (isCreated()) {
+                    progressDialog.setTitle("传输结束，正在计算本地文件的MD5码以校验文件完整性");
+                    progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5());
+                    progressDialog.setCancelable(false);
+                    progressDialog.show();
                 }
             });
         }
 
         @Override
         public void onTransferSucceed(final FileTransfer fileTransfer) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (isCreated()) {
-                        progressDialog.setTitle("传输成功");
-                        progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
-                                + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
-                                + "\n" + "文件位置：" + fileTransfer.getFilePath());
-                        progressDialog.setCancelable(true);
-                        progressDialog.show();
-                        Glide.with(FileReceiverActivity.this).load(fileTransfer.getFilePath()).into(iv_image);
-                    }
+            runOnUiThread(() -> {
+                if (isCreated()) {
+                    progressDialog.setTitle("传输成功");
+                    progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
+                            + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
+                            + "\n" + "文件位置：" + fileTransfer.getFilePath());
+                    progressDialog.setCancelable(true);
+                    progressDialog.show();
+                    Glide.with(FileReceiverActivity.this).load(fileTransfer.getFilePath()).into(iv_image);
                 }
             });
         }
 
         @Override
         public void onTransferFailed(final FileTransfer fileTransfer, final Exception e) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (isCreated()) {
-                        progressDialog.setTitle("传输失败");
-                        progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
-                                + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
-                                + "\n" + "文件位置：" + fileTransfer.getFilePath()
-                                + "\n" + "异常信息：" + e.getMessage());
-                        progressDialog.setCancelable(true);
-                        progressDialog.show();
-                    }
+            runOnUiThread(() -> {
+                if (isCreated()) {
+                    progressDialog.setTitle("传输失败");
+                    progressDialog.setMessage("原始文件的MD5码是：" + originFileTransfer.getMd5()
+                            + "\n" + "本地文件的MD5码是：" + fileTransfer.getMd5()
+                            + "\n" + "文件位置：" + fileTransfer.getFilePath()
+                            + "\n" + "异常信息：" + e.getMessage());
+                    progressDialog.setCancelable(true);
+                    progressDialog.show();
                 }
             });
         }

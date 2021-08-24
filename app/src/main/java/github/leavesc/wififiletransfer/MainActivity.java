@@ -1,4 +1,4 @@
-package leavesc.hello.wififiletransfer;
+package github.leavesc.wififiletransfer;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -9,10 +9,10 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
 /**
- * 作者：chenZY
- * 时间：2018/4/3 14:56
- * 描述：https://www.jianshu.com/u/9df45b87cfdf
- * https://github.com/leavesC
+ * @Author: leavesC
+ * @Date: 2018/4/3 14:56
+ * @Desc:
+ * @Github：https://github.com/leavesC
  */
 public class MainActivity extends BaseActivity {
 

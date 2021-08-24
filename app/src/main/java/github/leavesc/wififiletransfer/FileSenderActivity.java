@@ -1,4 +1,4 @@
-package leavesc.hello.wififiletransfer;
+package github.leavesc.wififiletransfer;
 
 import android.app.ProgressDialog;
 import android.content.ComponentName;
@@ -19,17 +19,17 @@ import java.io.File;
 import java.text.MessageFormat;
 import java.util.List;
 
-import leavesc.hello.wififiletransfer.common.Constants;
-import leavesc.hello.wififiletransfer.common.Glide4Engine;
-import leavesc.hello.wififiletransfer.manager.WifiLManager;
-import leavesc.hello.wififiletransfer.model.FileTransfer;
-import leavesc.hello.wififiletransfer.service.FileSenderService;
+import github.leavesc.wififiletransfer.common.Constants;
+import github.leavesc.wififiletransfer.common.Glide4Engine;
+import github.leavesc.wififiletransfer.manager.WifiLManager;
+import github.leavesc.wififiletransfer.model.FileTransfer;
+import github.leavesc.wififiletransfer.service.FileSenderService;
 
 /**
- * 作者：chenZY
- * 时间：2018/4/3 14:53
- * 描述：https://www.jianshu.com/u/9df45b87cfdf
- * https://github.com/leavesC
+ * @Author: leavesC
+ * @Date: 2018/4/3 14:53
+ * @Desc:
+ * @Github：https://github.com/leavesC
  */
 public class FileSenderActivity extends BaseActivity {
 
@@ -41,80 +41,68 @@ public class FileSenderActivity extends BaseActivity {
 
     private ProgressDialog progressDialog;
 
-    private FileSenderService.OnSendProgressChangListener progressChangListener = new FileSenderService.OnSendProgressChangListener() {
+    private final FileSenderService.OnSendProgressChangListener progressChangListener = new FileSenderService.OnSendProgressChangListener() {
 
         @Override
         public void onStartComputeMD5() {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (isCreated()) {
-                        progressDialog.setTitle("发送文件");
-                        progressDialog.setMessage("正在计算文件的MD5码");
-                        progressDialog.setMax(100);
-                        progressDialog.setProgress(0);
-                        progressDialog.setCancelable(false);
-                        progressDialog.show();
-                    }
+            runOnUiThread(() -> {
+                if (isCreated()) {
+                    progressDialog.setTitle("发送文件");
+                    progressDialog.setMessage("正在计算文件的MD5码");
+                    progressDialog.setMax(100);
+                    progressDialog.setProgress(0);
+                    progressDialog.setCancelable(false);
+                    progressDialog.show();
                 }
             });
         }
 
         @Override
         public void onProgressChanged(final FileTransfer fileTransfer, final long totalTime, final int progress, final double instantSpeed, final long instantRemainingTime, final double averageSpeed, final long averageRemainingTime) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (isCreated()) {
-                        progressDialog.setTitle("正在发送文件： " + new File(fileTransfer.getFilePath()).getName());
-                        if (progress != 100) {
-                            progressDialog.setMessage("文件的MD5码：" + fileTransfer.getMd5()
-                                    + "\n\n" + "总的传输时间：" + totalTime + " 秒"
-                                    + "\n\n" + "瞬时-传输速率：" + (int) instantSpeed + " Kb/s"
-                                    + "\n" + "瞬时-预估的剩余完成时间：" + instantRemainingTime + " 秒"
-                                    + "\n\n" + "平均-传输速率：" + (int) averageSpeed + " Kb/s"
-                                    + "\n" + "平均-预估的剩余完成时间：" + averageRemainingTime + " 秒"
-                            );
-                        }
-                        progressDialog.setProgress(progress);
-                        progressDialog.setCancelable(true);
-                        progressDialog.show();
+            runOnUiThread(() -> {
+                if (isCreated()) {
+                    progressDialog.setTitle("正在发送文件： " + new File(fileTransfer.getFilePath()).getName());
+                    if (progress != 100) {
+                        progressDialog.setMessage("文件的MD5码：" + fileTransfer.getMd5()
+                                + "\n\n" + "总的传输时间：" + totalTime + " 秒"
+                                + "\n\n" + "瞬时-传输速率：" + (int) instantSpeed + " Kb/s"
+                                + "\n" + "瞬时-预估的剩余完成时间：" + instantRemainingTime + " 秒"
+                                + "\n\n" + "平均-传输速率：" + (int) averageSpeed + " Kb/s"
+                                + "\n" + "平均-预估的剩余完成时间：" + averageRemainingTime + " 秒"
+                        );
                     }
+                    progressDialog.setProgress(progress);
+                    progressDialog.setCancelable(true);
+                    progressDialog.show();
                 }
             });
         }
 
         @Override
         public void onTransferSucceed(FileTransfer fileTransfer) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (isCreated()) {
-                        progressDialog.setTitle("文件发送成功");
-                        progressDialog.setCancelable(true);
-                        progressDialog.show();
-                    }
+            runOnUiThread(() -> {
+                if (isCreated()) {
+                    progressDialog.setTitle("文件发送成功");
+                    progressDialog.setCancelable(true);
+                    progressDialog.show();
                 }
             });
         }
 
         @Override
         public void onTransferFailed(FileTransfer fileTransfer, final Exception e) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (isCreated()) {
-                        progressDialog.setTitle("文件发送失败");
-                        progressDialog.setMessage("异常信息： " + e.getMessage());
-                        progressDialog.setCancelable(true);
-                        progressDialog.show();
-                    }
+            runOnUiThread(() -> {
+                if (isCreated()) {
+                    progressDialog.setTitle("文件发送失败");
+                    progressDialog.setMessage("异常信息： " + e.getMessage());
+                    progressDialog.setCancelable(true);
+                    progressDialog.show();
                 }
             });
         }
     };
 
-    private ServiceConnection serviceConnection = new ServiceConnection() {
+    private final ServiceConnection serviceConnection = new ServiceConnection() {
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {

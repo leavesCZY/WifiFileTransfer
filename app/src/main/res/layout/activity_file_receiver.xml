@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".FileReceiverActivity">
+    tools:context="github.leavesc.wififiletransfer.FileReceiverActivity">
 
     <TextView
         android:id="@+id/tv_hint"

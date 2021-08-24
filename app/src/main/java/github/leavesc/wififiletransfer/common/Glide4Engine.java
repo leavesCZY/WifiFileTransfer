@@ -1,4 +1,4 @@
-package leavesc.hello.wififiletransfer.common;
+package github.leavesc.wififiletransfer.common;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
@@ -11,9 +11,10 @@ import com.bumptech.glide.request.RequestOptions;
 import com.zhihu.matisse.engine.ImageEngine;
 
 /**
- * 作者：leavesC
- * 时间：2019/5/17 17:04
- * 描述：
+ * @Author: leavesC
+ * @Date: 2019/5/17 17:04
+ * @Desc:
+ * @Github：https://github.com/leavesC
  */
 public class Glide4Engine implements ImageEngine {
 
