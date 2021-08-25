@@ -32,17 +32,21 @@ public class MainActivity extends BaseActivity {
                 if (grantResult != PackageManager.PERMISSION_GRANTED) {
                     showToast("缺少权限，请先授予权限");
                     return;
-                } else {
-                    showToast("已获得权限");
                 }
             }
+            showToast("已获得权限");
         }
     }
 
     public void checkPermission(View view) {
         ActivityCompat.requestPermissions(MainActivity.this,
-                new String[]{Manifest.permission.ACCESS_WIFI_STATE, Manifest.permission.CHANGE_WIFI_STATE, Manifest.permission.ACCESS_NETWORK_STATE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, CODE_REQ_PERMISSIONS);
+                new String[]{Manifest.permission.CHANGE_NETWORK_STATE,
+                        Manifest.permission.ACCESS_NETWORK_STATE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.ACCESS_WIFI_STATE,
+                        Manifest.permission.CHANGE_WIFI_STATE,
+                        Manifest.permission.ACCESS_FINE_LOCATION}, CODE_REQ_PERMISSIONS);
     }
 
     public void startFileSenderActivity(View view) {

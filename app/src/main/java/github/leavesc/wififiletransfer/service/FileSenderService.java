@@ -3,6 +3,7 @@ package github.leavesc.wififiletransfer.service;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
 import android.text.TextUtils;
@@ -12,6 +13,7 @@ import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
@@ -19,6 +21,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Date;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +53,7 @@ public class FileSenderService extends IntentService {
 
     private static final String ACTION_START_SEND = BuildConfig.APPLICATION_ID + ".service.action.startSend";
 
-    private static final String EXTRA_PARAM_FILE_TRANSFER = BuildConfig.APPLICATION_ID + ".service.extra.FileTransfer";
+    private static final String EXTRA_PARAM_FILE_TRANSFER = BuildConfig.APPLICATION_ID + ".service.extra.FileUri";
 
     private static final String EXTRA_PARAM_IP_ADDRESS = BuildConfig.APPLICATION_ID + ".service.extra.IpAddress";
 
@@ -183,41 +186,81 @@ public class FileSenderService extends IntentService {
         }
     }
 
+    private String getOutputFilePath(Context context, Uri fileUri) throws Exception {
+        String outputFilePath = context.getExternalCacheDir().getAbsolutePath() +
+                File.separatorChar + new Random().nextInt(10000) +
+                new Random().nextInt(10000) + ".jpg";
+        File outputFile = new File(outputFilePath);
+        if (!outputFile.exists()) {
+            outputFile.getParentFile().mkdirs();
+            outputFile.createNewFile();
+        }
+        Uri outputFileUri = Uri.fromFile(outputFile);
+        copyFile(context, fileUri, outputFileUri);
+        return outputFilePath;
+    }
+
+    private void copyFile(Context context, Uri inputUri, Uri outputUri) throws NullPointerException,
+            IOException {
+        try (InputStream inputStream = context.getContentResolver().openInputStream(inputUri);
+             OutputStream outputStream = new FileOutputStream(outputUri.getPath())) {
+            if (inputStream == null) {
+                throw new NullPointerException("InputStream for given input Uri is null");
+            }
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, length);
+            }
+        }
+    }
+
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent != null && ACTION_START_SEND.equals(intent.getAction())) {
-            clean();
-            fileTransfer = (FileTransfer) intent.getSerializableExtra(EXTRA_PARAM_FILE_TRANSFER);
-            String ipAddress = intent.getStringExtra(EXTRA_PARAM_IP_ADDRESS);
-            Log.e(TAG, "IP地址：" + ipAddress);
-            if (fileTransfer == null || TextUtils.isEmpty(ipAddress)) {
-                return;
-            }
-            if (TextUtils.isEmpty(fileTransfer.getMd5())) {
-                Logger.e(TAG, "MD5码为空，开始计算文件的MD5码");
-                if (progressChangListener != null) {
-                    progressChangListener.onStartComputeMD5();
-                }
-                fileTransfer.setMd5(Md5Util.getMd5(new File(fileTransfer.getFilePath())));
-                Log.e(TAG, "计算结束，文件的MD5码值是：" + fileTransfer.getMd5());
-            } else {
-                Logger.e(TAG, "MD5码不为空，无需再次计算，MD5码为：" + fileTransfer.getMd5());
-            }
-            int index = 0;
-            while (ipAddress.equals("0.0.0.0") && index < 5) {
-                Log.e(TAG, "ip: " + ipAddress);
-                ipAddress = WifiLManager.getHotspotIpAddress(this);
-                index++;
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (ipAddress.equals("0.0.0.0")) {
-                return;
-            }
             try {
+                clean();
+
+                String ipAddress = intent.getStringExtra(EXTRA_PARAM_IP_ADDRESS);
+                Log.e(TAG, "IP地址：" + ipAddress);
+                if (TextUtils.isEmpty(ipAddress)) {
+                    return;
+                }
+
+                Uri imageUri = Uri.parse(intent.getStringExtra(EXTRA_PARAM_FILE_TRANSFER));
+                String outputFilePath = getOutputFilePath(this, imageUri);
+                File outputFile = new File(outputFilePath);
+
+                fileTransfer = new FileTransfer();
+                fileTransfer.setFileName(outputFile.getName());
+                fileTransfer.setFileSize(outputFile.length());
+                fileTransfer.setFilePath(outputFilePath);
+
+                if (TextUtils.isEmpty(fileTransfer.getMd5())) {
+                    Logger.e(TAG, "MD5码为空，开始计算文件的MD5码");
+                    if (progressChangListener != null) {
+                        progressChangListener.onStartComputeMD5();
+                    }
+                    fileTransfer.setMd5(Md5Util.getMd5(new File(fileTransfer.getFilePath())));
+                    Log.e(TAG, "计算结束，文件的MD5码值是：" + fileTransfer.getMd5());
+                } else {
+                    Logger.e(TAG, "MD5码不为空，无需再次计算，MD5码为：" + fileTransfer.getMd5());
+                }
+                int index = 0;
+                while (ipAddress.equals("0.0.0.0") && index < 5) {
+                    Log.e(TAG, "ip: " + ipAddress);
+                    ipAddress = WifiLManager.getHotspotIpAddress(this);
+                    index++;
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (ipAddress.equals("0.0.0.0")) {
+                    return;
+                }
+
                 socket = new Socket();
                 socket.bind(null);
                 socket.connect((new InetSocketAddress(ipAddress, Constants.PORT)), 20000);
@@ -296,10 +339,10 @@ public class FileSenderService extends IntentService {
         fileTransfer = null;
     }
 
-    public static void startActionTransfer(Context context, FileTransfer fileTransfer, String ipAddress) {
+    public static void startActionTransfer(Context context, String fileUri, String ipAddress) {
         Intent intent = new Intent(context, FileSenderService.class);
         intent.setAction(ACTION_START_SEND);
-        intent.putExtra(EXTRA_PARAM_FILE_TRANSFER, fileTransfer);
+        intent.putExtra(EXTRA_PARAM_FILE_TRANSFER, fileUri);
         intent.putExtra(EXTRA_PARAM_IP_ADDRESS, ipAddress);
         context.startService(intent);
     }

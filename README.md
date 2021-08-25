@@ -1,28 +1,24 @@
-> 于 2019/11/23 更新，主要是适配了运行时权限，修复 bug，优化了传输流程
+在我的上一篇文章：[Android 实现无网络传输文件](https://juejin.cn/post/6844903565186596872)，我介绍了通过 Wifi Direct（Wifi 直连）实现 Android 设备之间进行文件传输的方法，可以在无移动网络的情况下实现点对点的文件传输
 
-在我的上一篇文章：[**Android 实现无网络传输文件**](https://www.jianshu.com/p/f5d66e15fbdf)，我介绍了通过 Wifi Direct（Wifi 直连）实现 Android 设备之间进行文件传输的方法，可以在无移动网络的情况下实现点对点的文件传输
+本来觉得这样也就够了，可在要应用到实际项目的时候，又考虑到用户的设备系统版本可能并不都符合要求（Wifi Direct 是 Android 4.0 后支持的功能，话说低于 4.4 版本的手机应该都很少了吧？），而且我也不确定 IOS 系统是否支持 Wifi Direct，所以为了让文件传输逻辑可以应用到更多的设备上，就又实现了通过 Wifi热点 进行文件传输的功能
 
-本来觉得这样也就够了，可在要应用到实际项目的时候，又考虑到用户的设备系统版本可能并不都符合要求（Wifi Direct 是 Android 4.0 后支持的功能，话说低于 4.4 版本的手机应该都很少了吧？），而且我也不确定 IOS 系统是否支持 Wifi Direct，所以为了让文件传输逻辑可以应用到更多的设备上，就又实现了通过 **Wifi热点** 进行文件传输的功能
+相比于通过 Wiif Direct 进行文件传输，通过 Wifi 热点进行设备配对更加方便，逻辑也更为直接，传输一个1G左右的压缩包用了5分钟左右的时间，平均传输速率有 3.5 M/S 左右。此外，相对于上个版本，新版本除了提供传输进度外，还提供了传输速率、预估完成时间、文件传输前后的MD5码等数据
 
-相比于通过 Wiif Direct 进行文件传输，通过 Wifi 热点进行设备配对更加方便，逻辑也更为直接，传输一个1G左右的压缩包用了5分钟左右的时间，平均传输速率有 **3.5 M/S** 左右。此外，相对于上个版本，新版本除了提供传输进度外，还提供了传输速率、预估完成时间、文件传输前后的MD5码等数据
-
-**项目地址：[WifiFileTransfer](https://github.com/leavesC/WifiFileTransfer)**
+项目地址：[WifiFileTransfer](https://github.com/leavesC/WifiFileTransfer)
 
 实现的效果如下所示：
 
 开启Ap热点接收文件
 
-![开启Ap热点接收文件](http://upload-images.jianshu.io/upload_images/2552605-dac256fcb8016d66.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7d2f7d06b2de4b61a45f935e3b287baf~tplv-k3u1fbpfcp-watermark.image)
 
 连接Wiif热点发送文件
 
-![连接Wiif热点发送文件](http://upload-images.jianshu.io/upload_images/2552605-cb84e341cfe79326.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2d2795b4f747478687719958410ecb6c~tplv-k3u1fbpfcp-watermark.image)
 
 文件传输完成后校验文件完整性
 
-![文件传输完成后校验文件完整性](http://upload-images.jianshu.io/upload_images/2552605-4fe935ea37918cc1.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
-
-
+![](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/64fe131e33ad4ab29080cedf0225e160~tplv-k3u1fbpfcp-watermark.image)
 
 开发步骤分为以下几点：
 
@@ -157,7 +153,7 @@ Ap热点开启成功后，就可以启动一个服务在后台等待文件发送
 ```java
      public interface OnProgressChangListener {
 
-        /**
+        /
          * 当传输进度发生变化时回调
          *
          * @param fileTransfer  文件发送方传来的文件模型
@@ -263,7 +259,7 @@ private FileReceiverService.OnReceiveProgressChangListener progressChangListener
 文件发送端作为客户端存在，需要主动连接文件接收端开启的Wifi热点
 
 ```java
-    /**
+    /
      * 连接指定Wifi
      *
      * @param context  上下文
@@ -289,7 +285,7 @@ private FileReceiverService.OnReceiveProgressChangListener progressChangListener
         return wifiManager.enableNetwork(networkId, true);
     }
 
-    /**
+    /
      * 开启Wifi
      *
      * @param context 上下文
@@ -300,7 +296,7 @@ private FileReceiverService.OnReceiveProgressChangListener progressChangListener
         return wifiManager != null && (wifiManager.isWifiEnabled() || wifiManager.setWifiEnabled(true));
     }
 
-    /**
+    /
      * 获取当前连接的Wifi的SSID
      *
      * @param context 上下文
@@ -431,10 +427,9 @@ demo 提供的例子是只用来传输图片，但理论上是可以传输任意
 MD5码值通过如下方法计算得到
 
 ```java
-/**
+/
  * 作者：chenZY
  * 时间：2018/4/3 15:20
- * 描述：https://www.jianshu.com/u/9df45b87cfdf
  * https://github.com/leavesC
  */
 public class Md5Util {
@@ -481,6 +476,4 @@ public class Md5Util {
 }
 ```
 
-
-
-### **项目地址：[WifiFileTransfer](https://github.com/leavesC/WifiFileTransfer)**
+项目地址：[WifiFileTransfer](https://github.com/leavesC/WifiFileTransfer)

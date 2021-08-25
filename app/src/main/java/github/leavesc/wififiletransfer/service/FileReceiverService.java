@@ -4,7 +4,6 @@ import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Environment;
 import android.os.IBinder;
 import android.text.TextUtils;
 import android.util.Log;
@@ -209,7 +208,7 @@ public class FileReceiverService extends IntentService {
                 }
                 String name = new File(fileTransfer.getFilePath()).getName();
                 //将文件存储至指定位置
-                file = new File(Environment.getExternalStorageDirectory() + "/" + name);
+                file = new File(getExternalCacheDir(), name);
                 fileOutputStream = new FileOutputStream(file);
                 startCallback();
                 byte[] buf = new byte[512];

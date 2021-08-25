@@ -4,23 +4,17 @@ import android.app.ProgressDialog;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-import com.zhihu.matisse.Matisse;
-import com.zhihu.matisse.MimeType;
-import com.zhihu.matisse.internal.entity.CaptureStrategy;
-
 import java.io.File;
 import java.text.MessageFormat;
-import java.util.List;
 
 import github.leavesc.wififiletransfer.common.Constants;
-import github.leavesc.wififiletransfer.common.Glide4Engine;
 import github.leavesc.wififiletransfer.manager.WifiLManager;
 import github.leavesc.wififiletransfer.model.FileTransfer;
 import github.leavesc.wififiletransfer.service.FileSenderService;
@@ -153,41 +147,29 @@ public class FileSenderActivity extends BaseActivity {
 
     public void sendFile(View view) {
         if (!Constants.AP_SSID.equals(WifiLManager.getConnectedSSID(this))) {
-            showToast("当前连接的Wifi并非文件接收端开启的Wifi热点，请重试");
+            showToast("当前连接的 Wifi 并非文件接收端开启的 Wifi 热点，请重试或者检查权限");
             return;
         }
-        navToChose();
+        navToChosePicture();
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == CODE_CHOOSE_FILE && resultCode == RESULT_OK) {
-            List<String> strings = Matisse.obtainPathResult(data);
-            if (strings != null && !strings.isEmpty()) {
-                String path = strings.get(0);
-                File file = new File(path);
-                if (file.exists()) {
-                    FileTransfer fileTransfer = new FileTransfer(file);
-                    Log.e(TAG, "待发送的文件：" + fileTransfer);
-                    FileSenderService.startActionTransfer(this, fileTransfer, WifiLManager.getHotspotIpAddress(this));
-                }
+        if (requestCode == CODE_CHOOSE_FILE) {
+            if (resultCode == RESULT_OK) {
+                String imageUri = data.getData().toString();
+                Log.e(TAG, "文件路径：" + imageUri);
+                FileSenderService.startActionTransfer(this, imageUri,
+                        WifiLManager.getHotspotIpAddress(this));
             }
         }
     }
 
-    private void navToChose() {
-        Matisse.from(this)
-                .choose(MimeType.ofImage())
-                .countable(true)
-                .showSingleMediaType(true)
-                .maxSelectable(1)
-                .capture(false)
-                .captureStrategy(new CaptureStrategy(true, BuildConfig.APPLICATION_ID + ".fileprovider"))
-                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
-                .thumbnailScale(0.70f)
-                .imageEngine(new Glide4Engine())
-                .forResult(CODE_CHOOSE_FILE);
+    private void navToChosePicture() {
+        Intent intent = new Intent(Intent.ACTION_PICK, null);
+        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
+        startActivityForResult(intent, CODE_CHOOSE_FILE);
     }
 
 }

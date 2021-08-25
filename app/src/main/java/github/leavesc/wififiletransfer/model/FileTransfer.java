@@ -2,7 +2,6 @@ package github.leavesc.wififiletransfer.model;
 
 import androidx.annotation.NonNull;
 
-import java.io.File;
 import java.io.Serializable;
 
 /**
@@ -27,12 +26,6 @@ public class FileTransfer implements Serializable {
 
     public FileTransfer() {
 
-    }
-
-    public FileTransfer(File file) {
-        this.fileName = file.getName();
-        this.filePath = file.getPath();
-        this.fileSize = file.length();
     }
 
     public String getFileName() {

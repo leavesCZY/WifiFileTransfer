@@ -9,7 +9,7 @@ package github.leavesc.wififiletransfer.common;
 public class Constants {
 
     //要建立的Ap热点的名称
-    public static final String AP_SSID = "leavesC";
+    public static final String AP_SSID = "leavesc";
 
     //要建立的Ap热点的密码
     public static final String AP_PASSWORD = "123456789";
