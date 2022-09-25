@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="github.leavesc.wififiletransfer">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -15,14 +14,16 @@
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
         <activity
             android:name=".MainActivity"
-            android:screenOrientation="portrait">
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation|uiMode"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -30,18 +31,23 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".FileSenderActivity"
-            android:screenOrientation="portrait" />
+            android:name=".ui.FileSenderActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation|uiMode"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
         <activity
-            android:name=".FileReceiverActivity"
-            android:screenOrientation="portrait" />
+            android:name=".ui.FileReceiverActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation|uiMode"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
 
         <service
             android:name=".service.FileReceiverService"
             android:exported="false" />
         <service
             android:name=".service.FileSenderService"
-            android:enabled="true"
             android:exported="false" />
 
     </application>

@@ -5,27 +5,24 @@
     android:orientation="vertical">
 
     <Button
-        android:id="@+id/btn_checkPermission"
+        android:id="@+id/btnCheckPermission"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
-        android:onClick="checkPermission"
         android:text="检查权限" />
 
     <Button
-        android:id="@+id/btn_sender"
+        android:id="@+id/btnSender"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
-        android:onClick="startFileSenderActivity"
         android:text="文件发送端" />
 
     <Button
-        android:id="@+id/btn_receiver"
+        android:id="@+id/btnReceiver"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
-        android:onClick="startFileReceiverActivity"
         android:text="文件接收端" />
 
 </LinearLayout>

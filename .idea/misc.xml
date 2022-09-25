@@ -1,21 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="CMakeSettings">
-    <configurations>
-      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
-    </configurations>
-  </component>
-  <component name="DesignSurface">
-    <option name="filePathToZoomLevelMap">
-      <map>
-        <entry key="..\:/Users/CZY/Desktop/WifiFileTransfer/app/src/main/res/drawable/ic_launcher_background.xml" value="0.3764102564102564" />
-        <entry key="..\:/Users/CZY/Desktop/WifiFileTransfer/app/src/main/res/layout/activity_file_receiver.xml" value="0.22" />
-        <entry key="..\:/Users/CZY/Desktop/WifiFileTransfer/app/src/main/res/layout/activity_file_sender.xml" value="0.36614583333333334" />
-        <entry key="..\:/Users/CZY/Desktop/WifiFileTransfer/app/src/main/res/layout/activity_main.xml" value="0.36614583333333334" />
-      </map>
-    </option>
-  </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="corretto-11" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/build/classes" />
   </component>
   <component name="ProjectType">

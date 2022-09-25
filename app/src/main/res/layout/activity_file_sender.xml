@@ -5,7 +5,7 @@
     android:orientation="vertical">
 
     <TextView
-        android:id="@+id/tv_hint"
+        android:id="@+id/tvHint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
@@ -14,10 +14,10 @@
         android:textSize="18sp" />
 
     <Button
+        android:id="@+id/sendFile"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
-        android:onClick="sendFile"
         android:text="选择要发送的文件" />
 
 </LinearLayout>
