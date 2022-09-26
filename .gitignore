@@ -5,6 +5,6 @@
 /build
 /captures
 .externalNativeBuild
-/.idea
-.idea
+.cxx
+local.properties
 /.idea/

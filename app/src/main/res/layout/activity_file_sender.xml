@@ -1,23 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context=".sender.FileSenderActivity">
 
     <TextView
-        android:id="@+id/tvHint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="20dp"
-        android:gravity="start"
-        android:textColor="@android:color/black"
+        android:layout_margin="10dp"
+        android:text="@string/connect_tips"
+        android:textColor="@color/black"
         android:textSize="18sp" />
 
     <Button
-        android:id="@+id/sendFile"
+        android:id="@+id/btnChooseFile"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
-        android:text="选择要发送的文件" />
+        android:text="选择图片" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/tvState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:textColor="@color/black"
+            android:textSize="18sp" />
+
+    </ScrollView>
+
 
 </LinearLayout>
