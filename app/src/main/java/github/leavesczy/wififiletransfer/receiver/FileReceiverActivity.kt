@@ -38,6 +38,8 @@ class FileReceiverActivity : BaseActivity() {
         setContentView(R.layout.activity_file_receiver)
         supportActionBar?.title = "文件接收端"
         btnStartReceive.setOnClickListener {
+            tvState.text = ""
+            ivImage.load(data = null)
             fileReceiverViewModel.startListener()
         }
         initEvent()

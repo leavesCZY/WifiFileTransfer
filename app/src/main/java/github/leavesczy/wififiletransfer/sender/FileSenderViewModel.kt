@@ -78,7 +78,7 @@ class FileSenderViewModel(context: Application) :
                     objectOutputStream = ObjectOutputStream(outputStream)
                     objectOutputStream.writeObject(fileTransfer)
                     fileInputStream = FileInputStream(cacheFile)
-                    val buffer = ByteArray(1024 * 100)
+                    val buffer = ByteArray(1024 * 512)
                     var length: Int
                     while (true) {
                         length = fileInputStream.read(buffer)

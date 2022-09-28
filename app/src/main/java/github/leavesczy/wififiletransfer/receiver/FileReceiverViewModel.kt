@@ -73,7 +73,7 @@ class FileReceiverViewModel(context: Application) :
                 _log.emit(value = "开始传输文件")
 
                 fileOutputStream = FileOutputStream(file)
-                val buffer = ByteArray(1024 * 100)
+                val buffer = ByteArray(1024 * 512)
                 while (true) {
                     val length = clientInputStream.read(buffer)
                     if (length > 0) {
