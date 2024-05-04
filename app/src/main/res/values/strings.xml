@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">WifiFileTransfer</string>
-    <string name="connect_tips">注意\n1、在传输文件前，文件接收端需要先开启个人热点，并让文件发送端连接上该热点\n2、文件接收端先启动监听，文件发送端再发送文件</string>
+    <string name="connect_tips">注意\n1、在传输文件前，接收端需要先开启个人热点，并让发送端连接上该热点\n2、接收端先启动监听，然后发送端选择文件进行发送</string>
     <string name="start_listen">启动监听</string>
+    <string name="choose_image">选择图片</string>
 </resources>

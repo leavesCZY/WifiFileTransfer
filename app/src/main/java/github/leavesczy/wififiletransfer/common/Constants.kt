@@ -1,4 +1,4 @@
-package github.leavesczy.wififiletransfer
+package github.leavesczy.wififiletransfer.common
 
 /**
  * @Author: CZY

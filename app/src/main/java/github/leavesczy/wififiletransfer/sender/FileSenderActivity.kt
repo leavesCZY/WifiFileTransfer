@@ -1,7 +1,5 @@
 package github.leavesczy.wififiletransfer.sender
 
-import android.content.Context
-import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
@@ -10,7 +8,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import github.leavesczy.wififiletransfer.BaseActivity
 import github.leavesczy.wififiletransfer.R
-import github.leavesczy.wififiletransfer.models.ViewState
+import github.leavesczy.wififiletransfer.common.FileTransferViewState
 import kotlinx.coroutines.launch
 
 /**
@@ -22,16 +20,11 @@ class FileSenderActivity : BaseActivity() {
 
     private val fileSenderViewModel by viewModels<FileSenderViewModel>()
 
-    private val getContentLaunch = registerForActivityResult(
+    private val imagePickerLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { imageUri ->
         if (imageUri != null) {
-            fileSenderViewModel.send(
-                ipAddress = getHotspotIpAddress(
-                    context = applicationContext
-                ),
-                fileUri = imageUri
-            )
+            fileSenderViewModel.sendFile(fileUri = imageUri)
         }
     }
 
@@ -48,60 +41,46 @@ class FileSenderActivity : BaseActivity() {
         setContentView(R.layout.activity_file_sender)
         supportActionBar?.title = "文件发送端"
         btnChooseFile.setOnClickListener {
-            getContentLaunch.launch("image/*")
+            imagePickerLauncher.launch("image/*")
         }
         initEvent()
     }
 
     private fun initEvent() {
         lifecycleScope.launch {
-            fileSenderViewModel.viewState.collect {
-                when (it) {
-                    ViewState.Idle -> {
-                        tvState.text = ""
-                        dismissLoadingDialog()
-                    }
+            launch {
+                fileSenderViewModel.fileTransferViewState.collect {
+                    when (it) {
+                        FileTransferViewState.Idle -> {
+                            tvState.text = ""
+                            dismissLoadingDialog()
+                        }
 
-                    ViewState.Connecting -> {
-                        showLoadingDialog()
-                    }
+                        FileTransferViewState.Connecting -> {
+                            showLoadingDialog()
+                        }
 
-                    is ViewState.Receiving -> {
-                        showLoadingDialog()
-                    }
+                        is FileTransferViewState.Receiving -> {
+                            showLoadingDialog()
+                        }
 
-                    is ViewState.Success -> {
-                        dismissLoadingDialog()
-                    }
+                        is FileTransferViewState.Success -> {
+                            dismissLoadingDialog()
+                        }
 
-                    is ViewState.Failed -> {
-                        dismissLoadingDialog()
+                        is FileTransferViewState.Failed -> {
+                            dismissLoadingDialog()
+                        }
                     }
                 }
             }
-        }
-        lifecycleScope.launch {
-            fileSenderViewModel.log.collect {
-                tvState.append(it)
-                tvState.append("\n\n")
+            launch {
+                fileSenderViewModel.log.collect {
+                    tvState.append(it)
+                    tvState.append("\n\n")
+                }
             }
         }
-    }
-
-    private fun getHotspotIpAddress(context: Context): String {
-        val wifiManager =
-            context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-        val wifiInfo = wifiManager?.connectionInfo
-        if (wifiInfo != null) {
-            val dhcpInfo = wifiManager.dhcpInfo
-            if (dhcpInfo != null) {
-                val address = dhcpInfo.gateway
-                return ((address and 0xFF).toString() + "." + (address shr 8 and 0xFF)
-                        + "." + (address shr 16 and 0xFF)
-                        + "." + (address shr 24 and 0xFF))
-            }
-        }
-        return ""
     }
 
 }

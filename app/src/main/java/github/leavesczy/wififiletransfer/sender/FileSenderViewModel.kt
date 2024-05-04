@@ -3,13 +3,14 @@ package github.leavesczy.wififiletransfer.sender
 import android.app.Application
 import android.content.Context
 import android.net.Uri
+import android.net.wifi.WifiManager
 import androidx.core.net.toFile
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import github.leavesczy.wififiletransfer.Constants
-import github.leavesczy.wififiletransfer.models.FileTransfer
-import github.leavesczy.wififiletransfer.models.ViewState
+import github.leavesczy.wififiletransfer.common.Constants
+import github.leavesczy.wififiletransfer.common.FileTransfer
+import github.leavesczy.wififiletransfer.common.FileTransferViewState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,12 +31,11 @@ import kotlin.random.Random
  * @Date: 2022/9/26 10:38
  * @Desc:
  */
-class FileSenderViewModel(context: Application) :
-    AndroidViewModel(context) {
+class FileSenderViewModel(context: Application) : AndroidViewModel(context) {
 
-    private val _viewState = MutableSharedFlow<ViewState>()
+    private val _FileTransfer_viewState = MutableSharedFlow<FileTransferViewState>()
 
-    val viewState: SharedFlow<ViewState> = _viewState
+    val fileTransferViewState: SharedFlow<FileTransferViewState> = _FileTransfer_viewState
 
     private val _log = MutableSharedFlow<String>()
 
@@ -43,68 +43,68 @@ class FileSenderViewModel(context: Application) :
 
     private var job: Job? = null
 
-    fun send(ipAddress: String, fileUri: Uri) {
-        if (job != null) {
-            return
-        }
+    fun sendFile(fileUri: Uri) {
+        job?.cancel()
         job = viewModelScope.launch {
-            withContext(context = Dispatchers.IO) {
-                _viewState.emit(value = ViewState.Idle)
-
-                var socket: Socket? = null
-                var outputStream: OutputStream? = null
-                var objectOutputStream: ObjectOutputStream? = null
-                var fileInputStream: FileInputStream? = null
-                try {
-                    val cacheFile =
-                        saveFileToCacheDir(context = getApplication(), fileUri = fileUri)
-                    val fileTransfer = FileTransfer(fileName = cacheFile.name)
-
-                    _viewState.emit(value = ViewState.Connecting)
-                    _log.emit(value = "待发送的文件: $fileTransfer")
-                    _log.emit(value = "开启 Socket")
-
-                    socket = Socket()
-                    socket.bind(null)
-
-                    _log.emit(value = "socket connect，如果三十秒内未连接成功则放弃")
-
-                    socket.connect(InetSocketAddress(ipAddress, Constants.PORT), 30000)
-
-                    _viewState.emit(value = ViewState.Receiving)
-                    _log.emit(value = "连接成功，开始传输文件")
-
-                    outputStream = socket.getOutputStream()
-                    objectOutputStream = ObjectOutputStream(outputStream)
-                    objectOutputStream.writeObject(fileTransfer)
-                    fileInputStream = FileInputStream(cacheFile)
-                    val buffer = ByteArray(1024 * 512)
-                    var length: Int
-                    while (true) {
-                        length = fileInputStream.read(buffer)
-                        if (length > 0) {
-                            outputStream.write(buffer, 0, length)
-                        } else {
-                            break
-                        }
-                        _log.emit(value = "正在传输文件，length : $length")
-                    }
-                    _log.emit(value = "文件发送成功")
-                    _viewState.emit(value = ViewState.Success(file = cacheFile))
-                } catch (e: Throwable) {
-                    e.printStackTrace()
-                    _log.emit(value = "异常: " + e.message)
-                    _viewState.emit(value = ViewState.Failed(throwable = e))
-                } finally {
-                    fileInputStream?.close()
-                    outputStream?.close()
-                    objectOutputStream?.close()
-                    socket?.close()
-                }
-            }
+            val ipAddress = getHotspotIpAddress(context = getApplication())
+            sendFile(ipAddress = ipAddress, fileUri = fileUri)
         }
-        job?.invokeOnCompletion {
-            job = null
+    }
+
+    private suspend fun sendFile(ipAddress: String, fileUri: Uri) {
+        withContext(context = Dispatchers.IO) {
+            _FileTransfer_viewState.emit(value = FileTransferViewState.Idle)
+
+            var socket: Socket? = null
+            var outputStream: OutputStream? = null
+            var objectOutputStream: ObjectOutputStream? = null
+            var fileInputStream: FileInputStream? = null
+            try {
+                val cacheFile =
+                    saveFileToCacheDir(context = getApplication(), fileUri = fileUri)
+                val fileTransfer = FileTransfer(fileName = cacheFile.name)
+
+                _FileTransfer_viewState.emit(value = FileTransferViewState.Connecting)
+                _log.emit(value = "待发送的文件: $fileTransfer")
+                _log.emit(value = "开启 Socket")
+
+                socket = Socket()
+                socket.bind(null)
+
+                _log.emit(value = "socket connect，如果三十秒内未连接成功则放弃")
+
+                socket.connect(InetSocketAddress(ipAddress, Constants.PORT), 30000)
+
+                _FileTransfer_viewState.emit(value = FileTransferViewState.Receiving)
+                _log.emit(value = "连接成功，开始传输文件")
+
+                outputStream = socket.getOutputStream()
+                objectOutputStream = ObjectOutputStream(outputStream)
+                objectOutputStream.writeObject(fileTransfer)
+                fileInputStream = FileInputStream(cacheFile)
+                val buffer = ByteArray(1024 * 512)
+                var length: Int
+                while (true) {
+                    length = fileInputStream.read(buffer)
+                    if (length > 0) {
+                        outputStream.write(buffer, 0, length)
+                    } else {
+                        break
+                    }
+                    _log.emit(value = "正在传输文件，length : $length")
+                }
+                _log.emit(value = "文件发送成功")
+                _FileTransfer_viewState.emit(value = FileTransferViewState.Success(file = cacheFile))
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                _log.emit(value = "异常: " + e.message)
+                _FileTransfer_viewState.emit(value = FileTransferViewState.Failed(throwable = e))
+            } finally {
+                fileInputStream?.close()
+                outputStream?.close()
+                objectOutputStream?.close()
+                socket?.close()
+            }
         }
     }
 
@@ -147,6 +147,21 @@ class FileSenderViewModel(context: Application) :
             inputStream.close()
             outputStream.close()
         }
+    }
+
+    private fun getHotspotIpAddress(context: Application): String {
+        val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        val wifiInfo = wifiManager?.connectionInfo
+        if (wifiInfo != null) {
+            val dhcpInfo = wifiManager.dhcpInfo
+            if (dhcpInfo != null) {
+                val address = dhcpInfo.gateway
+                return ((address and 0xFF).toString() + "." + (address shr 8 and 0xFF)
+                        + "." + (address shr 16 and 0xFF)
+                        + "." + (address shr 24 and 0xFF))
+            }
+        }
+        return ""
     }
 
 }

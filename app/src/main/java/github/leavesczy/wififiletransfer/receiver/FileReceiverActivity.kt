@@ -9,7 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import coil.load
 import github.leavesczy.wififiletransfer.BaseActivity
 import github.leavesczy.wififiletransfer.R
-import github.leavesczy.wififiletransfer.models.ViewState
+import github.leavesczy.wififiletransfer.common.FileTransferViewState
 import kotlinx.coroutines.launch
 
 /**
@@ -47,36 +47,38 @@ class FileReceiverActivity : BaseActivity() {
 
     private fun initEvent() {
         lifecycleScope.launch {
-            fileReceiverViewModel.viewState.collect {
-                when (it) {
-                    ViewState.Idle -> {
-                        tvState.text = ""
-                        dismissLoadingDialog()
-                    }
+            launch {
+                fileReceiverViewModel.fileTransferViewState.collect {
+                    when (it) {
+                        FileTransferViewState.Idle -> {
+                            tvState.text = ""
+                            dismissLoadingDialog()
+                        }
 
-                    ViewState.Connecting -> {
-                        showLoadingDialog()
-                    }
+                        FileTransferViewState.Connecting -> {
+                            showLoadingDialog()
+                        }
 
-                    is ViewState.Receiving -> {
-                        showLoadingDialog()
-                    }
+                        is FileTransferViewState.Receiving -> {
+                            showLoadingDialog()
+                        }
 
-                    is ViewState.Success -> {
-                        dismissLoadingDialog()
-                        ivImage.load(data = it.file)
-                    }
+                        is FileTransferViewState.Success -> {
+                            dismissLoadingDialog()
+                            ivImage.load(data = it.file)
+                        }
 
-                    is ViewState.Failed -> {
-                        dismissLoadingDialog()
+                        is FileTransferViewState.Failed -> {
+                            dismissLoadingDialog()
+                        }
                     }
                 }
             }
-        }
-        lifecycleScope.launch {
-            fileReceiverViewModel.log.collect {
-                tvState.append(it)
-                tvState.append("\n\n")
+            launch {
+                fileReceiverViewModel.log.collect {
+                    tvState.append(it)
+                    tvState.append("\n\n")
+                }
             }
         }
     }

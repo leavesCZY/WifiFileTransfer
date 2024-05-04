@@ -19,7 +19,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
-        android:text="选择图片" />
+        android:text="@string/choose_image"
+        tools:ignore="HardcodedText" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -34,6 +35,5 @@
             android:textSize="18sp" />
 
     </ScrollView>
-
 
 </LinearLayout>

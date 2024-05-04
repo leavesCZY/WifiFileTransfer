@@ -4,9 +4,9 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import github.leavesczy.wififiletransfer.Constants
-import github.leavesczy.wififiletransfer.models.FileTransfer
-import github.leavesczy.wififiletransfer.models.ViewState
+import github.leavesczy.wififiletransfer.common.Constants
+import github.leavesczy.wififiletransfer.common.FileTransfer
+import github.leavesczy.wififiletransfer.common.FileTransferViewState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,13 +27,15 @@ import java.net.ServerSocket
 class FileReceiverViewModel(context: Application) :
     AndroidViewModel(context) {
 
-    private val _viewState = MutableSharedFlow<ViewState>()
+    private val _fileTransferViewState = MutableSharedFlow<FileTransferViewState>()
 
-    val viewState: SharedFlow<ViewState> = _viewState
+    val fileTransferViewState: SharedFlow<FileTransferViewState>
+        get() = _fileTransferViewState
 
     private val _log = MutableSharedFlow<String>()
 
-    val log: SharedFlow<String> = _log
+    val log: SharedFlow<String>
+        get() = _log
 
     private var job: Job? = null
 
@@ -42,14 +44,14 @@ class FileReceiverViewModel(context: Application) :
             return
         }
         job = viewModelScope.launch(context = Dispatchers.IO) {
-            _viewState.emit(value = ViewState.Idle)
+            _fileTransferViewState.emit(value = FileTransferViewState.Idle)
 
             var serverSocket: ServerSocket? = null
             var clientInputStream: InputStream? = null
             var objectInputStream: ObjectInputStream? = null
             var fileOutputStream: FileOutputStream? = null
             try {
-                _viewState.emit(value = ViewState.Connecting)
+                _fileTransferViewState.emit(value = FileTransferViewState.Connecting)
                 _log.emit(value = "开启 Socket")
 
                 serverSocket = ServerSocket()
@@ -61,7 +63,7 @@ class FileReceiverViewModel(context: Application) :
 
                 val client = serverSocket.accept()
 
-                _viewState.emit(value = ViewState.Receiving)
+                _fileTransferViewState.emit(value = FileTransferViewState.Receiving)
 
                 clientInputStream = client.getInputStream()
                 objectInputStream = ObjectInputStream(clientInputStream)
@@ -83,11 +85,11 @@ class FileReceiverViewModel(context: Application) :
                     }
                     _log.emit(value = "正在传输文件，length : $length")
                 }
-                _viewState.emit(value = ViewState.Success(file = file))
+                _fileTransferViewState.emit(value = FileTransferViewState.Success(file = file))
                 _log.emit(value = "文件接收成功")
             } catch (e: Throwable) {
                 _log.emit(value = "异常: " + e.message)
-                _viewState.emit(value = ViewState.Failed(throwable = e))
+                _fileTransferViewState.emit(value = FileTransferViewState.Failed(throwable = e))
             } finally {
                 serverSocket?.close()
                 clientInputStream?.close()

@@ -26,6 +26,7 @@ open class BaseActivity : AppCompatActivity() {
 
     protected fun dismissLoadingDialog() {
         loadingDialog?.dismiss()
+        loadingDialog = null
     }
 
     protected fun <T : Activity> startActivity(clazz: Class<T>) {
