@@ -3,6 +3,7 @@ package github.leavesczy.wififiletransfer
 import android.app.Activity
 import android.app.ProgressDialog
 import android.content.Intent
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 /**
@@ -31,6 +32,10 @@ open class BaseActivity : AppCompatActivity() {
 
     protected fun <T : Activity> startActivity(clazz: Class<T>) {
         startActivity(Intent(this, clazz))
+    }
+
+    protected fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
 }

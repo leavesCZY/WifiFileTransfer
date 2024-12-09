@@ -33,19 +33,19 @@ import kotlin.random.Random
  */
 class FileSenderViewModel(context: Application) : AndroidViewModel(context) {
 
-    private val _FileTransfer_viewState = MutableSharedFlow<FileTransferViewState>()
+    private val _fileTransferViewState = MutableSharedFlow<FileTransferViewState>()
 
-    val fileTransferViewState: SharedFlow<FileTransferViewState> = _FileTransfer_viewState
+    val fileTransferViewState: SharedFlow<FileTransferViewState> = _fileTransferViewState
 
     private val _log = MutableSharedFlow<String>()
 
     val log: SharedFlow<String> = _log
 
-    private var job: Job? = null
+    private var fileSenderJob: Job? = null
 
     fun sendFile(fileUri: Uri) {
-        job?.cancel()
-        job = viewModelScope.launch {
+        fileSenderJob?.cancel()
+        fileSenderJob = viewModelScope.launch {
             val ipAddress = getHotspotIpAddress(context = getApplication())
             sendFile(ipAddress = ipAddress, fileUri = fileUri)
         }
@@ -53,8 +53,10 @@ class FileSenderViewModel(context: Application) : AndroidViewModel(context) {
 
     private suspend fun sendFile(ipAddress: String, fileUri: Uri) {
         withContext(context = Dispatchers.IO) {
-            _FileTransfer_viewState.emit(value = FileTransferViewState.Idle)
-
+            _fileTransferViewState.emit(value = FileTransferViewState.Idle)
+            log {
+                "ipAddress: $ipAddress"
+            }
             var socket: Socket? = null
             var outputStream: OutputStream? = null
             var objectOutputStream: ObjectOutputStream? = null
@@ -63,26 +65,28 @@ class FileSenderViewModel(context: Application) : AndroidViewModel(context) {
                 val cacheFile =
                     saveFileToCacheDir(context = getApplication(), fileUri = fileUri)
                 val fileTransfer = FileTransfer(fileName = cacheFile.name)
-
-                _FileTransfer_viewState.emit(value = FileTransferViewState.Connecting)
-                _log.emit(value = "待发送的文件: $fileTransfer")
-                _log.emit(value = "开启 Socket")
-
+                _fileTransferViewState.emit(value = FileTransferViewState.Connecting)
+                log {
+                    "待发送的文件: $fileTransfer"
+                }
+                log {
+                    "开启 Socket"
+                }
                 socket = Socket()
                 socket.bind(null)
-
-                _log.emit(value = "socket connect，如果三十秒内未连接成功则放弃")
-
+                log {
+                    "socket connect，如果三十秒内未连接成功则放弃"
+                }
                 socket.connect(InetSocketAddress(ipAddress, Constants.PORT), 30000)
-
-                _FileTransfer_viewState.emit(value = FileTransferViewState.Receiving)
-                _log.emit(value = "连接成功，开始传输文件")
-
+                _fileTransferViewState.emit(value = FileTransferViewState.Receiving)
+                log {
+                    "连接成功，开始传输文件"
+                }
                 outputStream = socket.getOutputStream()
                 objectOutputStream = ObjectOutputStream(outputStream)
                 objectOutputStream.writeObject(fileTransfer)
                 fileInputStream = FileInputStream(cacheFile)
-                val buffer = ByteArray(1024 * 512)
+                val buffer = ByteArray(1024 * 1024)
                 var length: Int
                 while (true) {
                     length = fileInputStream.read(buffer)
@@ -91,14 +95,20 @@ class FileSenderViewModel(context: Application) : AndroidViewModel(context) {
                     } else {
                         break
                     }
-                    _log.emit(value = "正在传输文件，length : $length")
+                    log {
+                        "正在传输文件，length : $length"
+                    }
                 }
-                _log.emit(value = "文件发送成功")
-                _FileTransfer_viewState.emit(value = FileTransferViewState.Success(file = cacheFile))
+                log {
+                    "文件发送成功"
+                }
+                _fileTransferViewState.emit(value = FileTransferViewState.Success(file = cacheFile))
             } catch (e: Throwable) {
                 e.printStackTrace()
-                _log.emit(value = "异常: " + e.message)
-                _FileTransfer_viewState.emit(value = FileTransferViewState.Failed(throwable = e))
+                log {
+                    "异常: " + e.message
+                }
+                _fileTransferViewState.emit(value = FileTransferViewState.Failed(throwable = e))
             } finally {
                 fileInputStream?.close()
                 outputStream?.close()
@@ -162,6 +172,10 @@ class FileSenderViewModel(context: Application) : AndroidViewModel(context) {
             }
         }
         return ""
+    }
+
+    private suspend fun log(log: () -> Any) {
+        _log.emit(value = log().toString() + "\n\n")
     }
 
 }

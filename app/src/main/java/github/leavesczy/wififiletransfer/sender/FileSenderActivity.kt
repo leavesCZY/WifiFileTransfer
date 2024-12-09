@@ -70,6 +70,7 @@ class FileSenderActivity : BaseActivity() {
 
                         is FileTransferViewState.Failed -> {
                             dismissLoadingDialog()
+                            showToast(message = it.throwable.toString())
                         }
                     }
                 }
@@ -77,7 +78,6 @@ class FileSenderActivity : BaseActivity() {
             launch {
                 fileSenderViewModel.log.collect {
                     tvState.append(it)
-                    tvState.append("\n\n")
                 }
             }
         }

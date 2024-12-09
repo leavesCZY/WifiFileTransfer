@@ -1,16 +1,19 @@
 package github.leavesczy.wififiletransfer.receiver
 
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import coil.load
 import github.leavesczy.wififiletransfer.BaseActivity
 import github.leavesczy.wififiletransfer.R
 import github.leavesczy.wififiletransfer.common.FileTransferViewState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * @Author: CZY
@@ -39,7 +42,7 @@ class FileReceiverActivity : BaseActivity() {
         supportActionBar?.title = "文件接收端"
         btnStartReceive.setOnClickListener {
             tvState.text = ""
-            ivImage.load(data = null)
+            showImage(file = null)
             fileReceiverViewModel.startListener()
         }
         initEvent()
@@ -65,11 +68,12 @@ class FileReceiverActivity : BaseActivity() {
 
                         is FileTransferViewState.Success -> {
                             dismissLoadingDialog()
-                            ivImage.load(data = it.file)
+                            showImage(file = it.file)
                         }
 
                         is FileTransferViewState.Failed -> {
                             dismissLoadingDialog()
+                            showToast(message = it.throwable.toString())
                         }
                     }
                 }
@@ -77,8 +81,20 @@ class FileReceiverActivity : BaseActivity() {
             launch {
                 fileReceiverViewModel.log.collect {
                     tvState.append(it)
-                    tvState.append("\n\n")
                 }
+            }
+        }
+    }
+
+    private fun showImage(file: File?) {
+        if (file == null) {
+            ivImage.setImageBitmap(null)
+        } else {
+            lifecycleScope.launch {
+                val bitmap = withContext(context = Dispatchers.IO) {
+                    BitmapFactory.decodeFile(file.absolutePath)
+                }
+                ivImage.setImageBitmap(bitmap)
             }
         }
     }

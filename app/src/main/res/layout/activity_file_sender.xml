@@ -11,16 +11,14 @@
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
         android:text="@string/connect_tips"
-        android:textColor="@color/black"
-        android:textSize="18sp" />
+        android:textSize="15sp" />
 
     <Button
         android:id="@+id/btnChooseFile"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
-        android:text="@string/choose_image"
-        tools:ignore="HardcodedText" />
+        android:text="@string/choose_image" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -31,8 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
-            android:textColor="@color/black"
-            android:textSize="18sp" />
+            android:textSize="15sp" />
 
     </ScrollView>
 

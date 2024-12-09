@@ -11,8 +11,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
         android:text="@string/connect_tips"
-        android:textColor="@color/black"
-        android:textSize="18sp" />
+        android:textSize="15sp" />
 
     <Button
         android:id="@+id/btnStartReceive"
@@ -40,8 +39,7 @@
             android:id="@+id/tvState"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/black"
-            android:textSize="18sp" />
+            android:textSize="15sp" />
 
     </ScrollView>
 
