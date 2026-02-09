@@ -11,7 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
  * @Date: 2022/9/26 15:52
  * @Desc:
  */
-open class BaseActivity : AppCompatActivity() {
+abstract class BaseActivity : AppCompatActivity() {
 
     private var loadingDialog: ProgressDialog? = null
 
